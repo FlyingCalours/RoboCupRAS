@@ -31,9 +31,23 @@ Hence we have `lastClear X/Y` + `repeatCount` act as the memory that catch the s
 
 Agent can only do one thing per cycle, hence `calc()` need to pick what to do now.
 
-![Police Decision](police_decision_tree.png)
+![Police Decision](img/police_decision_tree.png)
 
 The attached decision tree by police clearly explain the decision logic chain for police.
+
+## Decision Tree of Police
+
+**Overall for calc:**
+
+![Overall](img/Police_Decision_Tree-Overall_Decision_Tree.png)
+
+**clearFromHere :**
+
+![clearFromHere](img/Police_Decision_Tree-clearFromHere.png)
+
+**cutTowards :**
+
+![cutTowards](img/Police_Decision_Tree-cutTowards.png)
 
 ## Build the calc
 
