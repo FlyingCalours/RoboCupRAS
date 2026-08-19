@@ -356,9 +356,16 @@ public class SampleExtActionClear extends ExtAction {
   private Action cutTowards(Road road, Blockade blockade, double agentX,double agentY, double aimX, double aimY) {
     Vector2D direction = new Point2D(aimX, aimY).minus(new Point2D(agentX, agentY));
 
-    // I FOUND CRITICAL BUGS !!!!
+    // If zero vector, force move to one point , if hit wall , trigger forcedMove logic
+    // Future Improvement : Walk within a distance inside the box
     if (direction.getLength() == 0) {
-      return null;
+      List<EntityID> here = new ArrayList<>();
+      here.add(road.getID);
+
+      int nudgeX = (int) (agentX + clearDistance);
+      int nudgeY = (int) agentY;
+
+      return new ActionMove(here,nudgeX,nudgeY);
     }
     Vector2D scaled = direction.normalised().scale(this.clearDistance);
     int clearX = (int) (agentX + scaled.getX());
