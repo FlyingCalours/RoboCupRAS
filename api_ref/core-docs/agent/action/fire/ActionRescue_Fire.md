@@ -11,7 +11,7 @@ ActionRescue(@Nonnull Human human);
 
 **ActionRescue (fire)** lets a **Fire Brigade** dig a buried human out. Fire brigades can rescue but cannot load or transport, so this is normally used only when a civilian is buried close to the fire site and no ambulance is nearby.
 
-> Identical API to the ambulance version — see [../ambulance/ActionRescue_Ambulance.md](ActionRescue_Ambulance.md). Import the class from the package matching your agent type.
+> Identical API to the ambulance version — see [ActionRescue_Ambulance.md](../ambulance/ActionRescue_Ambulance.md). Import the class from the package matching your agent type.
 
 - How do I **build** it ?
   - [ActionRescue(targetID)](#constructor-id)
