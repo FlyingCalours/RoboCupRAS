@@ -34,21 +34,124 @@ public class SampleExtActionClear extends ExtAction
 
 ## Attributes
 ```java
-// Must Defined in every agent
-private PathPlanning pathPlanning;
+/*
+LOGGER
+
+Purpose :
+    Monitor agents activity with datas instead of eyeball
+
+Expected Result :
+    Get the log printed
+
+Unexpected Result :
+    Expect to print error, if doesn't, this meant maybe LOGGER was suppressed by simulator
+
+How it works :
+    Create once , use static keyword so doesnt't rebuild for every agents, LOGGER write to the same place as any others
+*/
+private static final Logger LOGGER = Logger.getLogger(SampleExtActionClear.class.getName());
+
+
+/*
+CONFIG
+
+Purpose :
+    name string literals : avoid typo
+*/
+private static final String CONFIG_PREFIX = "sample_team.module.complex.SampleExtActionClear.";
+private static final String PATH_PLANNING_KEY = "SampleExtActionClear.PathPlanning";
+private static final String DEFAULT_PATH_PLANNING = "adf.impl.module.algorithm.DijkstraPathPlanning";
+
+
+/*
+Error Handling Config
+
+CONFIG_ABSENT :
+    Bad  : int value = developData.getInteger(key, 3);
+    Good : int value = developData.getInteger(key, CONFIG_ABSENT);
+    Why  :
+        If key not found, use default value, failed silently
+        Hence pass Integer.MIN_VALUE (impossible value) force Raise Error
+
+FALLBACK_CLEAR_DISTANCE :
+    prevent kernelClearDistance is an impossible value
+*/
+private static final int CONFIG_ABSENT = Integer.MIN_VALUE;
+private static final int FALLBACK_CLEAR_DISTANCE = 10000;
+
+
+/*
+Instance Fields : Wiring
+*/
+private final PathPlanning pathPlanning;
+private MessageManager messageManager;
+
+
+/*
+Instance Fields : Configuration
+
+    1. clearDistance
+        - Length of the corridor a single clear command cuts, in mm.
+
+    2. forcedMove
+        - Identical clear commands tolerated before forcing a move.
+
+    3. thresholdRest
+        - Damage per cycle above which the agent breaks off and rests.
+
+    4. cameCutTolerance
+        - How far apart two cut points must be to count as different, in mm.
+
+    5. maxApproachUnseen
+        - Cycles spent trying to perceive a blockade before writing it off.
+
+    6. deconflict
+        - Whether to honour the teammate safety valve at all.
+*/
+private final int clearDistance;
+private final int forcedMove;
+private final int thresholdRest;
+private final double sameCutTolerance;
+private final int maxApproachUnseen;
+private final boolean deconflict;
+
+
+/*
+Instance Fields : Per Cycle Scenario State
+*/
+private int kernelTime;
+
+
+/*
+Instance Fields : The Current Job
+*/
 private EntityID target;
+
+
+/*
+Instance Fields : Anti-Deadlock
+*/
+private int lastClearX;
+private int lastClearY;
+private int repeatCount;
+private int sweepAttempt;
+
+
+/*
+Instance Fields : Unseen Blockade Tracking
+*/
+private EntityID unseenRoad;
+private int unseenApproach;
+
 
 // Rest, suggested defined in every agent
 private int thresholdRest;
-private int kernelTime;
 
 // Agent Specific
 private int clearDistance;
 
 // Memory, avoid repeat clean
-private int lastClearX;
-private int lastClearY;
-private int repeatCount;
+
 private int forcedMove;
 ```
 
