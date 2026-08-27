@@ -1,6 +1,11 @@
 # ScenarioInfo.java
 
 ```java
+public class ScenarioInfo
+```
+
+**Constructor :**
+```java
 ScenarioInfo(
     @Nonnull Config config, 
     @Nonnull Mode mode

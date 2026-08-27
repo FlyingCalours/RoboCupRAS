@@ -138,21 +138,26 @@ private int sweepAttempt;
 
 
 /*
-Instance Fields : Unseen Blockade Tracking
+Instance Fields : Unseen Blockade Tracking, try to get the apexes shape 
 */
 private EntityID unseenRoad;
 private int unseenApproach;
 
 
-// Rest, suggested defined in every agent
-private int thresholdRest;
+/*
+Instance Fields : Teammate Coordination
 
-// Agent Specific
-private int clearDistance;
+Purpose :
+    Avoid 2 Police clean the same area
 
-// Memory, avoid repeat clean
-
-private int forcedMove;
+Attributes :
+    1. teammateTarget    : (RoadID     , TeammateID)                | Clear every cycle
+    2. teammatePosition  : (TeammateID , TeammatePosition)          | Clear every cycle
+    3. reportedRoadState : (RoadID     , boolean(report before?) )  | Keep
+*/
+private final Map<EntityID,EntityID> teammateTarget = new HashMap<>();
+private final Map<EntityID,EntityID> teammatePosition = new HashMap<>();
+private final Map<EntityID,boolean> reportedRoadState = new HashMap<>();
 ```
 
 

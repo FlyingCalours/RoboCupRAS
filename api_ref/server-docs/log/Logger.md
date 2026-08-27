@@ -2,8 +2,8 @@
 
 `rescuecore2.log.Logger`
 
-```
-class Logger   // static methods, never instantiated
+```java
+public final class Logger   // static methods, never instantiated
 ```
 
 **Logger** is the **logging facility** used across the server and the ADF. Prefer it to `System.out.println` — output is tagged with the agent context, so you can tell which of the twenty police forces printed a line, and levels can be filtered instead of deleted.

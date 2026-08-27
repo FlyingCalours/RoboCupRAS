@@ -2,7 +2,7 @@
 
 `adf.core.agent.communication.standard.bundle.topdown.*`
 
-```
+```java
 CommandAmbulance(boolean isRadio, EntityID toID, EntityID targetID, int action);
 CommandFire(boolean isRadio, EntityID toID, EntityID targetID, int action);
 CommandPolice(boolean isRadio, EntityID toID, EntityID targetID, int action);

@@ -2,9 +2,11 @@
 
 `rescuecore2.standard.entities.Human`
 
+```java
+public abstract class Human extends StandardEntity
 ```
-abstract class Human extends StandardEntity
-```
+
+[Read StandardEntity](StandardEntity.md)
 
 **Human** is the parent of every **moving actor** : `Civilian`, `AmbulanceTeam`, `FireBrigade`, `PoliceForce`. It carries the health and position properties that all rescue decisions are built on.
 

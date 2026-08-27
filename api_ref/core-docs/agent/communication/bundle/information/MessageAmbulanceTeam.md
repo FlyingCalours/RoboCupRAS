@@ -1,6 +1,15 @@
 # MessageAmbulanceTeam.java
 
+```java
+public class MessageAmbulanceTeam extends StandardMessage
 ```
+
+[Read StandardMessage](../StandardMessage.md)
+[Read CommunicationMessage](../../../../component/communication/CommunicationMessage.md)
+
+
+**Constructor :**
+```java
 MessageAmbulanceTeam(boolean isRadio, @Nonnull AmbulanceTeam ambulanceTeam, int action, @Nullable EntityID target);
 MessageAmbulanceTeam(boolean isRadio, StandardMessagePriority sendingPriority,
                      @Nonnull AmbulanceTeam ambulanceTeam, int action, @Nullable EntityID target);

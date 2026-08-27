@@ -1,6 +1,11 @@
 # MessageManager.java
 
+```java
+public class MessageManager
 ```
+
+**Constructor :**
+```java
 MessageManager();
 ```
 

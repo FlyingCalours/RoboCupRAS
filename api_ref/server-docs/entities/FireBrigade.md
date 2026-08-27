@@ -2,7 +2,16 @@
 
 `rescuecore2.standard.entities.FireBrigade`
 
+```java
+public class FireBrigade extends Human
 ```
+
+[Read Human](Human.md)
+
+[Read StandardEntity](StandardEntity.md)
+
+**Constructor :**
+```java
 FireBrigade(EntityID id);
 FireBrigade(FireBrigade other);
 ```

@@ -2,8 +2,8 @@
 
 `rescuecore2.standard.entities.StandardEntityURN`
 
-```
-enum StandardEntityURN
+```java
+public enum StandardEntityURN implements URN
 ```
 
 **StandardEntityURN** is the **type tag of every map entity**. You use it to ask the world model for all entities of a kind, and to branch on what an entity is.

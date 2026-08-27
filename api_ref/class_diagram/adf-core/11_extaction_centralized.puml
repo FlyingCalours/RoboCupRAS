@@ -1,0 +1,115 @@
+@startuml 11_extaction_centralized
+' adf-core-java (core-docs)
+'   adf.core.component.extaction.ExtAction
+'   adf.core.component.centralized.{CommandPicker, CommandExecutor}
+' Source: core-docs/component/extaction/**, core-docs/component/centralized/**
+
+skinparam classAttributeIconSize 0
+skinparam ClassBackgroundColor #FDFDFD
+skinparam ClassBorderColor #444444
+hide empty members
+
+package "adf.core.component.extaction" {
+
+    abstract class ExtAction {
+        # agentInfo : AgentInfo
+        # worldInfo : WorldInfo
+        # scenarioInfo : ScenarioInfo
+        # moduleManager : ModuleManager
+        # developData : DevelopData
+        # result : Action
+        - countPrecompute : int
+        - countResume : int
+        - countPreparate : int
+        - countUpdateInfo : int
+        - countUpdateInfoCurrentTime : int
+        --
+        + ExtAction(AgentInfo, WorldInfo, ScenarioInfo, ModuleManager, DevelopData)
+        --
+        + {abstract} setTarget(EntityID) : ExtAction
+        + setTarget(EntityID...) : ExtAction <<deprecated>>
+        + {abstract} calc() : ExtAction
+        + getAction() : Action
+        --
+        + precompute(PrecomputeData) : ExtAction
+        + resume(PrecomputeData) : ExtAction
+        + preparate() : ExtAction
+        + updateInfo(MessageManager) : ExtAction
+        --
+        + getCountPrecompute() : int
+        + getCountResume() : int
+        + getCountPreparate() : int
+        + getCountUpdateInfo() : int
+        + resetCountPrecompute() : void
+        + resetCountResume() : void
+        + resetCountPreparate() : void
+        + resetCountUpdateInfo() : void
+    }
+}
+
+package "adf.core.component.centralized" {
+
+    abstract class CommandPicker {
+        # agentInfo : AgentInfo
+        # worldInfo : WorldInfo
+        # scenarioInfo : ScenarioInfo
+        # moduleManager : ModuleManager
+        # developData : DevelopData
+        --
+        + CommandPicker(AgentInfo, WorldInfo, ScenarioInfo, ModuleManager, DevelopData)
+        --
+        + {abstract} setAllocatorResult(Map<EntityID, EntityID>) : CommandPicker
+        + {abstract} calc() : CommandPicker
+        + {abstract} getResult() : Collection<CommunicationMessage>
+        --
+        + precompute(PrecomputeData) : CommandPicker
+        + resume(PrecomputeData) : CommandPicker
+        + preparate() : CommandPicker
+        + updateInfo(MessageManager) : CommandPicker
+        --
+        + getCountPrecompute() : int
+        + getCountResume() : int
+        + getCountPreparate() : int
+        + getCountUpdateInfo() : int
+        + resetCountPrecompute() : void
+        + resetCountResume() : void
+        + resetCountPreparate() : void
+        + resetCountUpdateInfo() : void
+    }
+
+    abstract class "CommandExecutor<C extends CommunicationMessage>" as CommandExecutor {
+        # agentInfo : AgentInfo
+        # worldInfo : WorldInfo
+        # scenarioInfo : ScenarioInfo
+        # moduleManager : ModuleManager
+        # developData : DevelopData
+        # result : Action
+        --
+        + CommandExecutor(AgentInfo, WorldInfo, ScenarioInfo, ModuleManager, DevelopData)
+        --
+        + {abstract} setCommand(C) : CommandExecutor
+        + {abstract} calc() : CommandExecutor
+        + getAction() : Action
+        --
+        + precompute(PrecomputeData) : CommandExecutor
+        + resume(PrecomputeData) : CommandExecutor
+        + preparate() : CommandExecutor
+        + updateInfo(MessageManager) : CommandExecutor
+        --
+        + getCountPrecompute() : int
+        + getCountResume() : int
+        + getCountPreparate() : int
+        + getCountUpdateInfo() : int
+        + resetCountPrecompute() : void
+        + resetCountResume() : void
+        + resetCountPreparate() : void
+        + resetCountUpdateInfo() : void
+    }
+}
+
+ExtAction ..> "Action" : produces
+CommandExecutor ..> "Action" : produces
+CommandPicker ..> "CommunicationMessage" : produces
+CommandPicker ..> "TargetAllocator" : consumes allocation map
+
+@enduml

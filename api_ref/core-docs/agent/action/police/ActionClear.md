@@ -1,6 +1,13 @@
 # ActionClear.java
 
+```java
+public class ActionClear extends Action
 ```
+
+[Read Action](../Action.md)
+
+**Constructor :**
+```java
 ActionClear(@Nonnull EntityID targetID);
 ActionClear(@Nonnull Blockade blockade);
 ActionClear(@Nonnull AgentInfo agent, @Nonnull Vector2D vector);

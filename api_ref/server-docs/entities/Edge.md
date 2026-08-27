@@ -2,7 +2,12 @@
 
 `rescuecore2.standard.entities.Edge`
 
+```java
+public class Edge
 ```
+
+**Constructor :**
+```java
 Edge(int startX, int startY, int endX, int endY);
 Edge(Point2D start, Point2D end);
 Edge(int startX, int startY, int endX, int endY, EntityID neighbour);

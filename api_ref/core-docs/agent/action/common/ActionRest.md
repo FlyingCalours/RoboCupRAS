@@ -1,6 +1,13 @@
 # ActionRest.java
 
+```java
+public class ActionRest extends Action
 ```
+
+[Read Action](../Action.md)
+
+**Constructor :**
+```java
 ActionRest();
 ```
 

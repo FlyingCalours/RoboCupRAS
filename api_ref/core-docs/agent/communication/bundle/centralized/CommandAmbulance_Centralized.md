@@ -2,7 +2,15 @@
 
 `adf.core.agent.communication.standard.bundle.centralized.CommandAmbulance`
 
+```java
+public class CommandAmbulance extends StandardMessage
 ```
+
+[Read StandardMessage](../StandardMessage.md)
+[Read CommunicationMessage](../../../../component/communication/CommunicationMessage.md)
+
+**Constructor :**
+```java
 CommandAmbulance(boolean isRadio, @Nullable EntityID toID, @Nullable EntityID targetID, int action);
 CommandAmbulance(boolean isRadio, StandardMessagePriority sendingPriority,
       @Nullable EntityID toID, @Nullable EntityID targetID, int action);

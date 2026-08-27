@@ -117,47 +117,51 @@ public class SampleExtActionClear extends ExtAction {
   private final int maxApproachUnseen;
   private final boolean deconflict;
 
+  // Instance Fields : Per Cycle Scenario State
   private int kernelTime;
 
+  // Instance Fields : The Current Job
   private EntityID target;
 
+  // Instance Fields : Anti-Deadlock
   private int lastClearX;
   private int lastClearY;
   private int repeatCount;
   private int sweepAttempt;
 
-  /** Road whose blockade shapes we are currently trying to perceive. */
+  // Instance Fields : Unseen Blockade Tracking, try to get the apexes shape
   private EntityID unseenRoad;
   private int unseenApproach;
 
-  /** target road -> teammate that claimed it, rebuilt every cycle. */
+  // <RoadID, TeammateID>
   private final Map<EntityID, EntityID> teammateTarget = new HashMap<>();
 
-  /** teammate -> its reported position, rebuilt every cycle. */
+  // <TeammateID, TeammatePosition>
   private final Map<EntityID, EntityID> teammatePosition = new HashMap<>();
 
-  /** road -> last passability we broadcast, so we do not spam the channel. */
+  // <RoadID, boolean>
   private final Map<EntityID, Boolean> reportedRoadState = new HashMap<>();
 
   public SampleExtActionClear(AgentInfo ai, WorldInfo wi, ScenarioInfo si, ModuleManager moduleManager, DevelopData developData) {
     super(ai, wi, si, moduleManager, developData);
 
-    // ---- FIX 7: every tunable is range-checked and says so when it falls back
+    // GET kernelClearDistance BUT validate
     int kernelClearDistance = si.getClearRepairDistance();
     if (kernelClearDistance <= 0) {
-      LOGGER.warning("scenario reports clearRepairDistance=" + kernelClearDistance
+
+      LOGGER.warning("WARNING !!! Scenario reports clearRepairDistance=" + kernelClearDistance
           + ", which cannot be right; using " + FALLBACK_CLEAR_DISTANCE);
+
       kernelClearDistance = FALLBACK_CLEAR_DISTANCE;
     }
+
     this.clearDistance = kernelClearDistance;
 
-    this.forcedMove = readConfig(developData, "forcedMove", 3, 1, 100);
-    this.thresholdRest = readConfig(developData, "rest", 100, 1, 10000);
-    this.sameCutTolerance = readConfig(developData, "sameCutTolerance", 1000, 1,
-        this.clearDistance);
-    this.maxApproachUnseen = readConfig(developData, "maxApproachUnseen", 5, 1,
-        100);
-    this.deconflict = readConfig(developData, "deconflict", 1, 0, 1) == 1;
+    this.forcedMove = 3;
+    this.thresholdRest = 100;
+    this.sameCutTolerance = 1000; // Or clearDistance / 10.0
+    this.maxApproachUnseen = 5;
+    this.deconflict = true;
 
     this.target = null;
     this.kernelTime = -1;
@@ -168,53 +172,7 @@ public class SampleExtActionClear extends ExtAction {
     this.unseenRoad = null;
     this.unseenApproach = 0;
 
-    // ---- FIX 5: a default branch, and a loud failure instead of a later NPE
-    PathPlanning resolved;
-    switch (si.getMode()) {
-      case PRECOMPUTATION_PHASE:
-      case PRECOMPUTED:
-      case NON_PRECOMPUTE:
-        resolved = moduleManager.getModule(PATH_PLANNING_KEY, DEFAULT_PATH_PLANNING);
-        break;
-      default:
-        LOGGER.warning("unhandled ScenarioInfo mode " + si.getMode() + "; falling back to " + DEFAULT_PATH_PLANNING);
-        resolved = moduleManager.getModule(PATH_PLANNING_KEY, DEFAULT_PATH_PLANNING);
-        break;
-    }
-    if (resolved == null) {
-      // Better to die here, with a sentence explaining why, than to die in
-      // calc() with a bare NullPointerException 40 cycles into a run.
-      throw new IllegalStateException("module.cfg key '" + PATH_PLANNING_KEY + 
-      "' resolved to no PathPlanning implementation (default '"
-          + DEFAULT_PATH_PLANNING + "' also unavailable)");
-    }
-    this.pathPlanning = resolved;
-  }
-
-
-  /**
-   * FIX 7. {@code DevelopData.getInteger} returns the default both when the key
-   * is missing and when develop mode is off, and never says which. Passing a
-   * sentinel distinguishes the two, so a typo in {@code develop.json} produces
-   * a warning instead of silence, while a normal (non-develop) run stays quiet.
-   */
-  private static int readConfig(DevelopData developData, String shortKey, int fallback, int min, int max) {
-    String key = CONFIG_PREFIX + shortKey;
-    int value = developData.getInteger(key, CONFIG_ABSENT);
-    if (value == CONFIG_ABSENT) {
-      if (developData.isDevelopMode()) {
-        LOGGER.warning("develop mode is on but key '" + key
-            + "' was not found; using default " + fallback
-            + " (check the spelling)");
-      }
-      return fallback;
-    }
-    if (value < min || value > max) {
-      LOGGER.warning("config '" + key + "' = " + value + " is outside ["
-          + min + ", " + max + "]; using default " + fallback);
-      return fallback;
-    }
-    return value;
+    this.pathPlanning = moduleManager.getModule(PATH_PLANNING_KEY, DEFAULT_PATH_PLANNING);
   }
 
 
@@ -222,12 +180,17 @@ public class SampleExtActionClear extends ExtAction {
 
   @Override
   public ExtAction precompute(PrecomputeData precomputeData) {
+
     super.precompute(precomputeData);
+
     if (this.getCountPrecompute() >= 2) {
       return this;
     }
+
     this.pathPlanning.precompute(precomputeData);
+
     this.readKernelTime();
+
     return this;
   }
 
@@ -285,21 +248,35 @@ public class SampleExtActionClear extends ExtAction {
    */
   @Override
   public ExtAction setTarget(EntityID target) {
+
     this.target = null;
+
     if (target == null) {
+
       return this;
     }
     StandardEntity entity = this.worldInfo.getEntity(target);
+
     if (entity instanceof Road) {
+
       this.target = target;
-    } else if (entity instanceof Blockade) {
+    } 
+
+    else if (entity instanceof Blockade) {
+
       Blockade blockade = (Blockade) entity;
+
       if (blockade.isPositionDefined()) {
+
         this.target = blockade.getPosition();
       }
-    } else if (entity instanceof Area) {
+    } 
+    
+    else if (entity instanceof Area) {
+
       this.target = target;
     }
+
     return this;
   }
 
@@ -316,7 +293,7 @@ public class SampleExtActionClear extends ExtAction {
     PoliceForce police = (PoliceForce) this.agentInfo.me();
     EntityID position = police.getPosition();
 
-    // (1) Survival first. A dead police agent clears nothing.
+    // Police Survival Check 
     if (this.needRest(police)) {
       Action rest = this.calcRest(police);
       if (rest != null) {
@@ -336,7 +313,7 @@ public class SampleExtActionClear extends ExtAction {
       return this;
     }
 
-    // (2) FIX 1, narrow version: if a teammate is already standing on the road
+    // if a teammate is already standing on the road
     // we were sent to, doing nothing is better than piling on. Returning null
     // lets the tactics class fall through to search instead of freezing.
     if (this.deconflict && this.shouldYield(police, position)) {
@@ -360,7 +337,7 @@ public class SampleExtActionClear extends ExtAction {
         this.report(police, clear, this.target);
         return this;
       }
-      // FIX 3: nothing left to cut. If this is the road we were sent to open,
+      // Nothing left to cut. If this is the road we were sent to open,
       // that is news the allocator and the station need.
       if (position.equals(this.target)) {
         this.reportRoad(here, null, true);
@@ -456,6 +433,7 @@ public class SampleExtActionClear extends ExtAction {
         aimY = apexes[index + 1];
       }
     }
+
     if (nearest == null) {
       return null;
     }
@@ -662,7 +640,7 @@ public class SampleExtActionClear extends ExtAction {
       this.readKernelTime();
     }
 
-    // FIX 4: standing next to a fire means the damage rate is about to rise,
+    // Standing next to a fire means the damage rate is about to rise,
     // so break off earlier than the flat threshold would.
     int threshold = this.thresholdRest;
     if (agent.isPositionDefined() && this.isNearFire(agent.getPosition())) {
@@ -676,7 +654,7 @@ public class SampleExtActionClear extends ExtAction {
 
 
   /**
-   * FIX 8. Picks a refuge that is not on fire, checks the planner can actually
+   * Picks a refuge that is not on fire, checks the planner can actually
    * reach it, and clears its way there rather than walking into rubble.
    */
   private Action calcRest(PoliceForce police) {
@@ -730,16 +708,19 @@ public class SampleExtActionClear extends ExtAction {
 
   // ------------------------------------------------------------ communication
 
-  /** FIX 1: rebuilt each cycle from what the team said last cycle. */
+  /** Rebuilt each cycle from what the team said last cycle. */
   private void readTeammateReports(MessageManager messageManager) {
     this.teammateTarget.clear();
     this.teammatePosition.clear();
-    EntityID me = this.agentInfo.me() != null ? this.agentInfo.me().getID()
-        : null;
+
+    EntityID me = this.agentInfo.me() != null ? this.agentInfo.me().getID() : null;
+
     for (CommunicationMessage raw : messageManager
         .getReceivedMessageList(MessagePoliceForce.class)) {
+
       MessagePoliceForce message = (MessagePoliceForce) raw;
       EntityID sender = message.getAgentID();
+
       if (sender == null || sender.equals(me)) {
         continue;
       }
@@ -754,7 +735,7 @@ public class SampleExtActionClear extends ExtAction {
 
 
   /**
-   * FIX 1, deliberately narrow. Yielding is only correct when someone else is
+   * Yielding is only correct when someone else is
    * literally standing on the road already; anything cleverer (distance
    * auctions, load balancing) belongs in the target allocator, which is the
    * only component that sees every agent at once.
@@ -776,7 +757,7 @@ public class SampleExtActionClear extends ExtAction {
   }
 
 
-  /** FIX 3: say what we are doing, so allocators and the station can react. */
+  /** Say what we are doing, so allocators and the station can react. */
   private void report(PoliceForce police, Action action, EntityID reportTarget) {
     if (this.messageManager == null) {
       return;
@@ -795,7 +776,7 @@ public class SampleExtActionClear extends ExtAction {
 
 
   /**
-   * FIX 3: broadcast a road's passability, but only when it changes. Radio
+   * Broadcast a road's passability, but only when it changes. Radio
    * bandwidth is a scored resource; repeating "still blocked" every cycle
    * crowds out everyone else's traffic.
    */

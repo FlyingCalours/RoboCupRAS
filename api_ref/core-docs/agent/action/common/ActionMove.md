@@ -1,6 +1,13 @@
 # ActionMove.java
 
+```java
+public class ActionMove extends Action
 ```
+
+[Read Action](../Action.md)
+
+**Constructor :**
+```java
 ActionMove(@Nonnull List<EntityID> movePath);
 ActionMove(@Nonnull List<EntityID> movePath, int destinationX, int destinationY);
 ```

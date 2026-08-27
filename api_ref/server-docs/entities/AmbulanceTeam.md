@@ -2,7 +2,16 @@
 
 `rescuecore2.standard.entities.AmbulanceTeam`
 
+```java
+public class AmbulanceTeam extends Human
 ```
+
+[Read Human](Human.md)
+
+[Read StandardEntity](StandardEntity.md)
+
+**Constructor :**
+```java
 AmbulanceTeam(EntityID id);
 AmbulanceTeam(AmbulanceTeam other);
 ```

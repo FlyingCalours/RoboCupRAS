@@ -2,11 +2,18 @@
 
 `rescuecore2.standard.entities.StandardEntity`
 
-```
+```java
 abstract class StandardEntity extends AbstractEntity
 ```
 
 **StandardEntity** is the **common parent of every object on the map** : `Area` (→ `Road`, `Building`), `Human` (→ `Civilian`, `AmbulanceTeam`, `FireBrigade`, `PoliceForce`), `Blockade`, and the centre buildings. Everything `WorldInfo.getEntity()` returns is one of these, so you almost always cast the result.
+
+**Classes that extend StandardEntity :**
+
+1. [Area](Area.md)
+2. [Blockade](Blockade.md)
+3. [Human](Human.md)
+
 
 ```java
 StandardEntity entity = worldInfo.getEntity(id);

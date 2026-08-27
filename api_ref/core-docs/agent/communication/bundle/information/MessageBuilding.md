@@ -1,6 +1,15 @@
 # MessageBuilding.java
 
+```java
+public class MessageBuilding extends StandardMessage
 ```
+
+[Read StandardMessage](../StandardMessage.md)
+[Read CommunicationMessage](../../../../component/communication/CommunicationMessage.md)
+
+
+**Constructor :**
+```java
 MessageBuilding(boolean isRadio, @Nonnull Building building);
 MessageBuilding(boolean isRadio, StandardMessagePriority sendingPriority, @Nonnull Building building);
 MessageBuilding(boolean isRadio, int from, int ttl, @Nonnull BitStreamReader bitStreamReader);

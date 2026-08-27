@@ -1,0 +1,108 @@
+@startuml 04_communication_core
+' adf-core-java (core-docs)
+'   adf.core.component.communication.*
+'   adf.core.agent.communication.MessageManager
+' Source: core-docs/component/communication/**, core-docs/agent/communication/MessageManager.md
+
+skinparam classAttributeIconSize 0
+skinparam ClassBackgroundColor #FDFDFD
+skinparam ClassBorderColor #444444
+hide empty members
+
+package "adf.core.component.communication" {
+
+    abstract class CommunicationMessage {
+        - isRadio : boolean
+        --
+        + CommunicationMessage(boolean)
+        --
+        + isRadio() : boolean
+        + {abstract} getByteArraySize() : int
+        + {abstract} toByteArray() : byte[]
+        + {abstract} toBitOutputStream() : BitOutputStream
+        + {abstract} getCheckKey() : String
+    }
+
+    abstract class MessageBundle {
+        + {abstract} getMessageClassList() : List<Class<? extends CommunicationMessage>>
+    }
+
+    abstract class MessageCoordinator {
+        + {abstract} coordinate(AgentInfo, WorldInfo, ScenarioInfo, MessageManager, ArrayList<CommunicationMessage>, List<List<CommunicationMessage>>) : void
+    }
+
+    class ChannelSubscriber {
+        + ChannelSubscriber()
+        --
+        + subscribe(AgentInfo, WorldInfo, ScenarioInfo, MessageManager) : void
+    }
+
+    abstract class CommunicationModule {
+        + {abstract} receive(Agent, MessageManager) : void
+        + {abstract} send(Agent, MessageManager) : void
+    }
+}
+
+package "adf.core.agent.communication" {
+
+    class MessageManager {
+        - sendMessageList
+        - channelSendMessageList
+        - receivedMessageList
+        - checkDuplicationCache
+        - channels
+        - isSubscribed
+        - messageCoordinator : MessageCoordinator
+        - channelSubscriber : ChannelSubscriber
+        - heardAgentHelpCount
+        --
+        + MessageManager()
+        --
+        .. receive ..
+        + getReceivedMessageList() : List<CommunicationMessage>
+        + getReceivedMessageList(Class<? extends CommunicationMessage>...) : List<CommunicationMessage>
+        + addReceivedMessage(CommunicationMessage) : void
+        --
+        .. send ..
+        + addMessage(CommunicationMessage) : void
+        + addMessage(CommunicationMessage, boolean) : void
+        + getSendMessageList() : List<List<CommunicationMessage>>
+        --
+        .. channels ..
+        + subscribeToChannels(int[]) : void
+        + getChannels() : int[]
+        + getIsSubscribed() : boolean
+        + setIsSubscribed(boolean) : void
+        + subscribe(AgentInfo, WorldInfo, ScenarioInfo) : void
+        + setChannelSubscriber(ChannelSubscriber) : void
+        --
+        .. message dictionary ..
+        + registerMessageBundle(MessageBundle) : void
+        + registerMessageClass(int, Class<? extends CommunicationMessage>) : boolean
+        + getMessageClass(int) : Class<? extends CommunicationMessage>
+        + getMessageClassIndex(CommunicationMessage) : int
+        --
+        .. coordination ..
+        + setMessageCoordinator(MessageCoordinator) : void
+        + coordinateMessages(AgentInfo, WorldInfo, ScenarioInfo) : void
+        --
+        + addHeardAgentHelpCount() : void
+        + getHeardAgentHelpCount() : int
+        + refresh() : void
+    }
+}
+
+MessageManager o-- MessageCoordinator
+MessageManager o-- ChannelSubscriber
+MessageManager ..> MessageBundle : registers
+MessageManager ..> CommunicationMessage : queues / decodes
+CommunicationModule ..> MessageManager : transports
+
+note bottom of CommunicationMessage
+  Concrete message types (StandardMessage and
+  all Message* / Command* classes) are in
+  05_message_bundle_information.puml and
+  06_message_bundle_centralized.puml
+end note
+
+@enduml

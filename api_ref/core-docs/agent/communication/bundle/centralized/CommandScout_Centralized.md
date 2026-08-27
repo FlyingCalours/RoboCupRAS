@@ -2,7 +2,16 @@
 
 `adf.core.agent.communication.standard.bundle.centralized.CommandScout`
 
+```java
+public class CommandScout extends StandardMessage
 ```
+
+[Read StandardMessage](../StandardMessage.md)
+[Read CommunicationMessage](../../../../component/communication/CommunicationMessage.md)
+
+
+**Constructor :**
+```java
 CommandScout(boolean isRadio, @Nullable EntityID toID, @Nullable EntityID targetID, int range);
 CommandScout(boolean isRadio, StandardMessagePriority sendingPriority,
              @Nullable EntityID toID, @Nullable EntityID targetID, int range);

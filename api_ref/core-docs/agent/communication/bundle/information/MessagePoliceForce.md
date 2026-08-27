@@ -1,6 +1,15 @@
 # MessagePoliceForce.java
 
+```java
+public class MessagePoliceForce extends StandardMessage
 ```
+
+[Read StandardMessage](../StandardMessage.md)
+[Read CommunicationMessage](../../../../component/communication/CommunicationMessage.md)
+
+
+**Constructor :**
+```java
 MessagePoliceForce(boolean isRadio, @Nonnull PoliceForce policeForce, int action, @Nullable EntityID target);
 MessagePoliceForce(boolean isRadio, StandardMessagePriority sendingPriority,
                    @Nonnull PoliceForce policeForce, int action, @Nullable EntityID target);

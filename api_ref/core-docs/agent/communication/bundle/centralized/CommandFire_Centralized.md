@@ -2,7 +2,14 @@
 
 `adf.core.agent.communication.standard.bundle.centralized.CommandFire`
 
+```java
+public class CommandFire extends StandardMessage
 ```
+
+[Read StandardMessage](../StandardMessage.md)
+[Read CommunicationMessage](../../../../component/communication/CommunicationMessage.md)
+
+```java
 CommandFire(boolean isRadio, @Nullable EntityID toID, @Nullable EntityID targetID, int action);
 CommandFire(boolean isRadio, StandardMessagePriority sendingPriority,
       @Nullable EntityID toID, @Nullable EntityID targetID, int action);

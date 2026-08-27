@@ -2,7 +2,18 @@
 
 `rescuecore2.standard.entities.Hydrant`
 
+```java
+public class Hydrant extends Road
 ```
+
+[Read Road](Road.md)
+
+[Read Area](Area.md)
+
+[Read StandardEntity](StandardEntity.md)
+
+**Constructor :**
+```java
 Hydrant(EntityID id);
 Hydrant(Hydrant other);
 Hydrant(Road other);

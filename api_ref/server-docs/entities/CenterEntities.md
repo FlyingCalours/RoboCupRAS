@@ -4,7 +4,20 @@
 `rescuecore2.standard.entities.FireStation`
 `rescuecore2.standard.entities.PoliceOffice`
 
+```java
+public class AmbulanceCentre extends Building{}
+public class FireStation extends Building{}
+public class PoliceOffice extends Building{}
 ```
+
+[Read Building](Building.md)
+
+[Read Area](Area.md)
+
+[Read StandardEntity](StandardEntity.md)
+
+**Constructor :**
+```java
 AmbulanceCentre(EntityID id);
 FireStation(EntityID id);
 PoliceOffice(EntityID id);

@@ -2,8 +2,8 @@
 
 `rescuecore2.messages.Command`
 
-```
-interface Command extends Message
+```java
+public interface Command extends Message
 ```
 
 **Command** is the **protocol level order** sent between agents and the kernel. Two places bring it into team code:

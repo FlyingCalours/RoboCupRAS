@@ -2,6 +2,11 @@
 
 `rescuecore2.worldmodel.EntityID`
 
+```java
+public final class EntityID
+```
+
+**Constructor :**
 ```
 EntityID(int id);
 ```

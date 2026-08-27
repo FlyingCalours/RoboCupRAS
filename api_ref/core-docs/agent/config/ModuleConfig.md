@@ -1,6 +1,14 @@
 # ModuleConfig.java
 
+```java
+import rescuecore2.config.Config;
+public class ModuleConfig extends Config
 ```
+
+[Read Config](../../../server-docs/config/Config.md)
+
+**Constructor :**
+```java
 ModuleConfig(
     @Nonnull String fileName,
     @Nonnull List<String> rawData

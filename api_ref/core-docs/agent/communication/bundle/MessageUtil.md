@@ -1,6 +1,6 @@
 # MessageUtil.java
 
-```
+```java
 class MessageUtil   // static helper, never instantiated
 ```
 

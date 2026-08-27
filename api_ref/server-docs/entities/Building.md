@@ -2,7 +2,16 @@
 
 `rescuecore2.standard.entities.Building`
 
+```java
+public class Building extends Area
 ```
+
+[Read Area](Area.md)
+
+[Read StandardEntity](StandardEntity.md)
+
+**Constructor :**
+```java
 Building(EntityID id);
 Building(Building other);
 ```

@@ -2,8 +2,8 @@
 
 `rescuecore2.standard.entities.StandardEntityConstants`
 
-```
-final class StandardEntityConstants   // holder of enums, never instantiated
+```java
+public final class StandardEntityConstants   // holder of enums, never instantiated
 ```
 
 **StandardEntityConstants** holds the **readable enums for building properties**. Use them instead of raw integers so your fire logic stays understandable.

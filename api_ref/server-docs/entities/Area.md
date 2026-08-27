@@ -2,9 +2,11 @@
 
 `rescuecore2.standard.entities.Area`
 
+```java
+public abstract class Area extends StandardEntity
 ```
-abstract class Area extends StandardEntity
-```
+
+[Read StandardEntity](StandardEntity.md)
 
 **Area** is anything an agent can **stand in** — `Road` and `Building` both extend it. It is the unit of movement: a path from `PathPlanning` is a list of `Area` IDs, and `AgentInfo.getPositionArea()` returns one.
 

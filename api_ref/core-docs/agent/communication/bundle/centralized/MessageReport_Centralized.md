@@ -2,7 +2,16 @@
 
 `adf.core.agent.communication.standard.bundle.centralized.MessageReport`
 
+```java
+public class MessageReport extends StandardMessage
 ```
+
+[Read StandardMessage](../StandardMessage.md)
+[Read CommunicationMessage](../../../../component/communication/CommunicationMessage.md)
+
+
+**Constructor :**
+```java
 MessageReport(boolean isRadio, boolean isDone, boolean isBroadcast, @Nullable EntityID fromID);
 MessageReport(boolean isRadio, StandardMessagePriority sendingPriority,
               boolean isDone, boolean isBroadcast, @Nullable EntityID fromID);

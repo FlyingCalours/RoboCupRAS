@@ -1,0 +1,121 @@
+@startuml 02_world_info
+' adf-core-java (core-docs) - adf.core.agent.info.WorldInfo
+' Source: core-docs/agent/info/WorldInfo.md
+
+skinparam classAttributeIconSize 0
+skinparam ClassBackgroundColor #FDFDFD
+skinparam ClassBorderColor #444444
+hide empty members
+
+package "adf.core.agent.info" {
+
+class WorldInfo {
+    - world : StandardWorldModel
+    - changed : ChangeSet
+    - time : int
+    - rollback : Map<EntityID, Map<Integer, Map<Integer, Object>>>
+    - runRollback : boolean
+    --
+    + WorldInfo(StandardWorldModel)
+    --
+    .. indexing / rollback ..
+    + indexClass(StandardEntityURN...) : void
+    + index() : void
+    + requestRollback() : WorldInfo
+    + isRequestedRollback() : boolean
+    --
+    .. entity lookup ..
+    + getEntity(EntityID) : StandardEntity
+    + getEntity(int, EntityID) : StandardEntity
+    + getEntity(int, StandardEntity) : StandardEntity
+    + getEntitiesOfType(StandardEntityURN) : Collection<StandardEntity>
+    + getEntitiesOfType(StandardEntityURN...) : Collection<StandardEntity>
+    + getEntitiesOfType(int, StandardEntityURN) : Collection<StandardEntity>
+    + getEntitiesOfType(int, StandardEntityURN...) : Collection<StandardEntity>
+    + getEntityIDsOfType(StandardEntityURN) : Collection<EntityID>
+    + getEntityIDsOfType(StandardEntityURN...) : Collection<EntityID>
+    + getEntityIDsOfType(int, StandardEntityURN) : Collection<EntityID>
+    + getEntityIDsOfType(int, StandardEntityURN...) : Collection<EntityID>
+    + getAllEntities() : Collection<StandardEntity>
+    + getAllEntities(int) : Collection<StandardEntity>
+    --
+    .. spatial queries : objects ..
+    + getObjectsInRange(EntityID, int) : Collection<StandardEntity>
+    + getObjectsInRange(StandardEntity, int) : Collection<StandardEntity>
+    + getObjectsInRange(int, int, int) : Collection<StandardEntity>
+    + getObjectsInRange(int, EntityID, int) : Collection<StandardEntity>
+    + getObjectsInRange(int, EntityID, int, boolean) : Collection<StandardEntity>
+    + getObjectsInRange(int, StandardEntity, int) : Collection<StandardEntity>
+    + getObjectsInRange(int, StandardEntity, int, boolean) : Collection<StandardEntity>
+    + getObjectsInRange(int, int, int, int) : Collection<StandardEntity>
+    + getObjectsInRange(int, int, int, int, boolean) : Collection<StandardEntity>
+    + getObjectsInRectangle(int, int, int, int) : Collection<StandardEntity>
+    + getObjectsInRectangle(int, int, int, int, int) : Collection<StandardEntity>
+    + getObjectsInRectangle(int, int, int, int, int, boolean) : Collection<StandardEntity>
+    --
+    .. spatial queries : IDs ..
+    + getObjectIDsInRange(EntityID, int) : Collection<EntityID>
+    + getObjectIDsInRange(StandardEntity, int) : Collection<EntityID>
+    + getObjectIDsInRange(int, int, int) : Collection<EntityID>
+    + getObjectIDsInRange(int, EntityID, int) : Collection<EntityID>
+    + getObjectIDsInRange(int, EntityID, int, boolean) : Collection<EntityID>
+    + getObjectIDsInRange(int, StandardEntity, int) : Collection<EntityID>
+    + getObjectIDsInRange(int, StandardEntity, int, boolean) : Collection<EntityID>
+    + getObjectIDsInRange(int, int, int, int) : Collection<EntityID>
+    + getObjectIDsInRange(int, int, int, int, boolean) : Collection<EntityID>
+    + getObjectIDsInRectangle(int, int, int, int) : Collection<EntityID>
+    + getObjectIDsInRectangle(int, int, int, int, int) : Collection<EntityID>
+    + getObjectIDsInRectangle(int, int, int, int, int, boolean) : Collection<EntityID>
+    --
+    .. specialised queries ..
+    + getFireBuildings() : Collection<Building>
+    + getFireBuildingIDs() : Collection<EntityID>
+    + getNumberOfBuried(Building) : int
+    + getNumberOfBuried(EntityID) : int
+    + getBuriedHumans(Building) : Collection<Human>
+    + getBuriedHumans(EntityID) : Collection<Human>
+    + getBlockades(EntityID) : Collection<Blockade>
+    + getBlockades(Area) : Collection<Blockade>
+    --
+    .. position / distance ..
+    + getPosition(Human) : StandardEntity
+    + getPosition(Blockade) : StandardEntity
+    + getPosition(EntityID) : StandardEntity
+    + getPosition(int, Human) : StandardEntity
+    + getPosition(int, Blockade) : StandardEntity
+    + getPosition(int, EntityID) : StandardEntity
+    + getLocation(StandardEntity) : Pair<Integer, Integer>
+    + getLocation(EntityID) : Pair<Integer, Integer>
+    + getLocation(int, StandardEntity) : Pair<Integer, Integer>
+    + getLocation(int, EntityID) : Pair<Integer, Integer>
+    + getDistance(EntityID, EntityID) : int
+    + getDistance(StandardEntity, StandardEntity) : int
+    + getDistance(int, EntityID, EntityID) : int
+    + getDistance(int, StandardEntity, StandardEntity) : int
+    + getBounds() : Rectangle2D
+    + getWorldBounds() : Pair<Pair<Integer, Integer>, Pair<Integer, Integer>>
+    --
+    .. mutation ..
+    + addEntity(Entity) : void
+    + addEntity(Entity, Class<? extends EntityListener>, Class<? extends EntityListener>...) : void
+    + addEntities(Collection<? extends Entity>) : void
+    + addEntities(Collection<? extends Entity>, Class<? extends EntityListener>, Class<? extends EntityListener>...) : void
+    + removeEntity(StandardEntity) : void
+    + removeEntity(EntityID) : void
+    + removeAllEntities() : void
+    + merge(ChangeSet) : void
+    --
+    .. listeners / state ..
+    + registerEntityListener(Class<? extends EntityListener>) : void
+    + registerWorldListener(Class<? extends WorldModelListener<StandardEntity>>) : void
+    + registerRollbackListener() : void
+    + getChanged() : ChangeSet
+    + setChanged(ChangeSet) : void
+    + setTime(int) : void
+    + setWorld(StandardWorldModel) : void
+    + getRawWorld() : StandardWorldModel
+}
+
+}
+
+@enduml

@@ -2,7 +2,16 @@
 
 `rescuecore2.standard.entities.Civilian`
 
+```java
+public class Civilian extends Human
 ```
+
+[Read Human](Human.md)
+
+[Read StandardEntity](StandardEntity.md)
+
+**Constructor :**
+```java
 Civilian(EntityID id);
 Civilian(Civilian other);
 ```

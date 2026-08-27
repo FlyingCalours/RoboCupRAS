@@ -1,7 +1,7 @@
 # StandardMessagePriority.java
 
-```
-enum StandardMessagePriority { LOW, NORMAL, HIGH }
+```java
+public enum StandardMessagePriority { LOW, NORMAL, HIGH }
 ```
 
 **StandardMessagePriority** tells the `MessageCoordinator` **how important a message is** when bandwidth is scarce. Every `StandardMessage` constructor has an overload taking a priority; the overload without it uses `NORMAL`.

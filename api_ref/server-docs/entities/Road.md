@@ -2,7 +2,16 @@
 
 `rescuecore2.standard.entities.Road`
 
+```java
+public class Road extends Area
 ```
+
+[Read Area](Area.md)
+
+[Read StandardEntity](StandardEntity.md)
+
+**Constructor :**
+```java
 Road(EntityID id);
 Road(Road other);
 ```

@@ -1,6 +1,13 @@
 # CommandExecutor.java
 
+```java
+public abstract class CommandExecutor<C extends CommunicationMessage>
 ```
+
+Note : `C extends CommunicationMessage` means the class that extend `CommunicationMessage`
+
+**Constructor :**
+```java
 CommandExecutor(
     AgentInfo ai,
     WorldInfo wi,

@@ -1,6 +1,11 @@
 # ChannelSubscriber.java
 
+```java
+public class ChannelSubscriber
 ```
+
+**Constructor :**
+```java
 ChannelSubscriber();
 ```
 
