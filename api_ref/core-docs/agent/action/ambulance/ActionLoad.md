@@ -1,6 +1,13 @@
 # ActionLoad.java
 
+```java
+public class ActionLoad extends Action
 ```
+
+[Read Action](../Action.md)
+
+**Constructor :**
+```java
 ActionLoad(@Nonnull EntityID targetID);
 ActionLoad(@Nonnull Civilian civilian);
 ```

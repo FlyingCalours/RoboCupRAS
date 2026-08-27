@@ -1,6 +1,13 @@
 # ActionExtinguish.java
 
+```java
+public class ActionExtinguish extends Action
 ```
+
+[Read Action](../Action.md)
+
+**Constructor :**
+```java
 ActionExtinguish(@Nonnull EntityID targetID, int maxPower);
 ActionExtinguish(@Nonnull Building building, int maxPower);
 ```

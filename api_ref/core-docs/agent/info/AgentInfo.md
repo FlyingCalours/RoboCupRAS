@@ -1,6 +1,11 @@
 # AgentInfo.java
 
+```java
+public class AgentInfo
 ```
+
+**Constructor :**
+```java
 AgentInfo(
     @Nonnull Agent agent, 
     @Nonnull StandardWorldModel world

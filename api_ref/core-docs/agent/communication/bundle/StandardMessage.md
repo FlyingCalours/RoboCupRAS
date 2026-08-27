@@ -1,6 +1,13 @@
 # StandardMessage.java
 
+```java
+abstract public class StandardMessage extends CommunicationMessage
 ```
+
+[Read CommunicationMessage](../../../component/communication/CommunicationMessage.md)
+
+**Constructor :**
+```java
 StandardMessage(boolean isRadio, StandardMessagePriority sendingPriority);
 StandardMessage(boolean isRadio, int senderID, int ttl, BitStreamReader bsr);
 ```

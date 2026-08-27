@@ -2,7 +2,18 @@
 
 `rescuecore2.standard.entities.GasStation`
 
+```java
+public class GasStation extends Building
 ```
+
+[Read Building](Building.md)
+
+[Read Area](Area.md)
+
+[Read StandardEntity](StandardEntity.md)
+
+**Constructor :**
+```java
 GasStation(EntityID entityID);
 GasStation(Building other);
 ```

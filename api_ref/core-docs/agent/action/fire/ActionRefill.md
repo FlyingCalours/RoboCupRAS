@@ -1,6 +1,13 @@
 # ActionRefill.java
 
+```java
+public class ActionRefill extends Action
 ```
+
+[Read Action](../Action.md)
+
+**Constructor :**
+```java
 ActionRefill();
 ```
 

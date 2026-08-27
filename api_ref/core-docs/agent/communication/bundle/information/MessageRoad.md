@@ -1,6 +1,15 @@
 # MessageRoad.java
 
+```java
+public class MessageRoad extends StandardMessage
 ```
+
+[Read StandardMessage](../StandardMessage.md)
+[Read CommunicationMessage](../../../../component/communication/CommunicationMessage.md)
+
+
+**Constructor :**
+```java
 MessageRoad(boolean isRadio, @Nonnull Road road, @Nullable Blockade blockade,
             @Nullable Boolean isPassable, boolean isSendBlockadeLocation);
 MessageRoad(boolean isRadio, StandardMessagePriority sendingPriority, @Nonnull Road road,

@@ -2,7 +2,14 @@
 
 `rescuecore2.standard.entities.Blockade`
 
+```java
+public class Blockade extends StandardEntity
 ```
+
+[Read StandardEntity](StandardEntity.md)
+
+**Constructor :**
+```java
 Blockade(EntityID id);
 Blockade(Blockade other);
 ```

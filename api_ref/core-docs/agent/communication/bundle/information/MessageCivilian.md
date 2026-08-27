@@ -1,6 +1,16 @@
 # MessageCivilian.java
 
+
+```java
+public class MessageCivilian extends StandardMessage
 ```
+
+[Read StandardMessage](../StandardMessage.md)
+[Read CommunicationMessage](../../../../component/communication/CommunicationMessage.md)
+
+
+**Constructor :**
+```java
 MessageCivilian(boolean isRadio, @Nonnull Civilian civilian);
 MessageCivilian(boolean isRadio, StandardMessagePriority sendingPriority, @Nonnull Civilian civilian);
 MessageCivilian(boolean isRadio, int from, int ttl, @Nonnull BitStreamReader bitStreamReader);

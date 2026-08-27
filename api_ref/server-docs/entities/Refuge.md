@@ -2,7 +2,18 @@
 
 `rescuecore2.standard.entities.Refuge`
 
+```java
+public class Refuge extends Building
 ```
+
+[Read Building](Building.md)
+
+[Read Area](Area.md)
+
+[Read StandardEntity](StandardEntity.md)
+
+**Constructor :**
+```java
 Refuge(EntityID id);
 Refuge(Refuge other);
 Refuge(Building other);

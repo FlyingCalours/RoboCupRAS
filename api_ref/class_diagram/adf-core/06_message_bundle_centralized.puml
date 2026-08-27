@@ -1,0 +1,135 @@
+@startuml 06_message_bundle_centralized
+' adf-core-java (core-docs)
+'   adf.core.agent.communication.standard.bundle.centralized.*
+' Source: core-docs/agent/communication/bundle/centralized/**
+
+skinparam classAttributeIconSize 0
+skinparam ClassBackgroundColor #FDFDFD
+skinparam ClassBorderColor #444444
+hide empty members
+
+package "adf.core.agent.communication.standard.bundle" {
+    abstract class StandardMessage {
+        ' full definition in 05_message_bundle_information.puml
+    }
+}
+
+package "adf.core.agent.communication.standard.bundle.centralized" {
+
+    class CommandAmbulance {
+        + {static} ACTION_REST : int = 0
+        + {static} ACTION_MOVE : int = 1
+        + {static} ACTION_RESCUE : int = 2
+        + {static} ACTION_LOAD : int = 3
+        + {static} ACTION_UNLOAD : int = 4
+        + {static} ACTION_AUTONOMY : int = 5
+        --
+        # toID : EntityID
+        # targetID : EntityID
+        # action : int
+        --
+        + CommandAmbulance(boolean, EntityID, EntityID, int)
+        + CommandAmbulance(boolean, StandardMessagePriority, EntityID, EntityID, int)
+        + CommandAmbulance(boolean, int, int, BitStreamReader)
+        --
+        + getToID() : EntityID
+        + getTargetID() : EntityID
+        + getAction() : int
+        + isBroadcast() : boolean
+        + isToIDDefined() : boolean
+        + isTargetIDDefined() : boolean
+    }
+
+    class CommandFire {
+        + {static} ACTION_REST : int = 0
+        + {static} ACTION_MOVE : int = 1
+        + {static} ACTION_EXTINGUISH : int = 2
+        + {static} ACTION_REFILL : int = 3
+        + {static} ACTION_RESCUE : int = 4
+        + {static} ACTION_AUTONOMY : int = 5
+        --
+        # toID : EntityID
+        # targetID : EntityID
+        # action : int
+        --
+        + CommandFire(boolean, EntityID, EntityID, int)
+        + CommandFire(boolean, StandardMessagePriority, EntityID, EntityID, int)
+        + CommandFire(boolean, int, int, BitStreamReader)
+        --
+        + getToID() : EntityID
+        + getTargetID() : EntityID
+        + getAction() : int
+        + isBroadcast() : boolean
+        + isToIDDefined() : boolean
+        + isTargetIDDefined() : boolean
+    }
+
+    class CommandPolice {
+        + {static} ACTION_REST : int = 0
+        + {static} ACTION_MOVE : int = 1
+        + {static} ACTION_CLEAR : int = 2
+        + {static} ACTION_AUTONOMY : int = 3
+        --
+        # toID : EntityID
+        # targetID : EntityID
+        # action : int
+        --
+        + CommandPolice(boolean, EntityID, EntityID, int)
+        + CommandPolice(boolean, StandardMessagePriority, EntityID, EntityID, int)
+        + CommandPolice(boolean, int, int, BitStreamReader)
+        --
+        + getToID() : EntityID
+        + getTargetID() : EntityID
+        + getAction() : int
+        + isBroadcast() : boolean
+        + isToIDDefined() : boolean
+        + isTargetIDDefined() : boolean
+    }
+
+    class CommandScout {
+        # toID : EntityID
+        # targetID : EntityID
+        # range : int
+        --
+        + CommandScout(boolean, EntityID, EntityID, int)
+        + CommandScout(boolean, StandardMessagePriority, EntityID, EntityID, int)
+        + CommandScout(boolean, int, int, BitStreamReader)
+        --
+        + getToID() : EntityID
+        + getTargetID() : EntityID
+        + getRange() : int
+        + isBroadcast() : boolean
+        + isToIDDefined() : boolean
+        + isTargetIDDefined() : boolean
+    }
+
+    class MessageReport {
+        # isDone : boolean
+        # isBroadcast : boolean
+        # fromID : EntityID
+        --
+        + MessageReport(boolean, boolean, boolean, EntityID)
+        + MessageReport(boolean, StandardMessagePriority, boolean, boolean, EntityID)
+        + MessageReport(boolean, int, int, BitStreamReader)
+        --
+        + isDone() : boolean
+        + isFailed() : boolean
+        + getFromID() : EntityID
+        + isBroadcast() : boolean
+        + isFromIDDefined() : boolean
+    }
+}
+
+StandardMessage <|-- CommandAmbulance
+StandardMessage <|-- CommandFire
+StandardMessage <|-- CommandPolice
+StandardMessage <|-- CommandScout
+StandardMessage <|-- MessageReport
+
+note bottom of MessageReport
+  The topdown.* package holds five twin classes
+  with the same API in a different package -
+  pick one set per team (per core-docs INDEX.md).
+end note
+
+@enduml

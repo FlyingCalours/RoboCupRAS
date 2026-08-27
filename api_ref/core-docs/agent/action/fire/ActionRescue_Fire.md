@@ -2,7 +2,14 @@
 
 `adf.core.agent.action.fire.ActionRescue`
 
+```java
+public class ActionRescue extends Action
 ```
+
+[Read Action](../Action.md)
+
+**Constructor :**
+```java
 ActionRescue(@Nonnull EntityID targetID);
 ActionRescue(@Nonnull Human human);
 ```

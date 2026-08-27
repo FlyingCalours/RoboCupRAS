@@ -1,6 +1,15 @@
 # MessageFireBrigade.java
 
+```java
+public class MessageFireBrigade extends StandardMessage
 ```
+
+[Read StandardMessage](../StandardMessage.md)
+[Read CommunicationMessage](../../../../component/communication/CommunicationMessage.md)
+
+
+**Constructor :**
+```java
 MessageFireBrigade(boolean isRadio, @Nonnull FireBrigade fireBrigade, int action, @Nullable EntityID target);
 MessageFireBrigade(boolean isRadio, StandardMessagePriority sendingPriority,
                    @Nonnull FireBrigade fireBrigade, int action, @Nullable EntityID target);

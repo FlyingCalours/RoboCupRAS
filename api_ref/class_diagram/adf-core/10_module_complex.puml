@@ -1,0 +1,174 @@
+@startuml 10_module_complex
+' adf-core-java (core-docs) - adf.core.component.module.complex.*
+' Source: core-docs/component/module/complex/**
+
+skinparam classAttributeIconSize 0
+skinparam ClassBackgroundColor #FDFDFD
+skinparam ClassBorderColor #444444
+hide empty members
+
+package "adf.core.component.module" {
+    abstract class AbstractModule {
+        ' full definition in 09_module_algorithm.puml
+    }
+}
+
+package "adf.core.component.module.complex" {
+
+    abstract class "TargetDetector<E>" as TargetDetector {
+        + TargetDetector(AgentInfo, WorldInfo, ScenarioInfo, ModuleManager, DevelopData)
+        --
+        + {abstract} calc() : TargetDetector<E>
+        + {abstract} getTarget() : EntityID
+        + precompute(PrecomputeData) : TargetDetector<E>
+        + resume(PrecomputeData) : TargetDetector<E>
+        + preparate() : TargetDetector<E>
+        + updateInfo(MessageManager) : TargetDetector<E>
+    }
+
+    abstract class Search {
+        + Search(AgentInfo, WorldInfo, ScenarioInfo, ModuleManager, DevelopData)
+        --
+        + {abstract} calc() : Search
+        + precompute(PrecomputeData) : Search
+        + resume(PrecomputeData) : Search
+        + preparate() : Search
+        + updateInfo(MessageManager) : Search
+    }
+
+    abstract class BuildingDetector {
+        + BuildingDetector(AgentInfo, WorldInfo, ScenarioInfo, ModuleManager, DevelopData)
+        --
+        + {abstract} calc() : BuildingDetector
+        + precompute(PrecomputeData) : BuildingDetector
+        + resume(PrecomputeData) : BuildingDetector
+        + preparate() : BuildingDetector
+        + updateInfo(MessageManager) : BuildingDetector
+    }
+
+    abstract class HumanDetector {
+        + HumanDetector(AgentInfo, WorldInfo, ScenarioInfo, ModuleManager, DevelopData)
+        --
+        + {abstract} calc() : HumanDetector
+        + precompute(PrecomputeData) : HumanDetector
+        + resume(PrecomputeData) : HumanDetector
+        + preparate() : HumanDetector
+        + updateInfo(MessageManager) : HumanDetector
+    }
+
+    abstract class RoadDetector {
+        + RoadDetector(AgentInfo, WorldInfo, ScenarioInfo, ModuleManager, DevelopData)
+        --
+        + {abstract} calc() : RoadDetector
+        + precompute(PrecomputeData) : RoadDetector
+        + resume(PrecomputeData) : RoadDetector
+        + preparate() : RoadDetector
+        + updateInfo(MessageManager) : RoadDetector
+    }
+
+    abstract class "TargetSelector<E>" as TargetSelector <<deprecated>> {
+        + TargetSelector(AgentInfo, WorldInfo, ScenarioInfo, ModuleManager, DevelopData)
+        --
+        + {abstract} calc() : TargetSelector<E>
+        + {abstract} getTarget() : EntityID
+        + precompute(PrecomputeData) : TargetSelector<E>
+        + resume(PrecomputeData) : TargetSelector<E>
+        + preparate() : TargetSelector<E>
+        + updateInfo(MessageManager) : TargetSelector<E>
+    }
+
+    abstract class BuildingSelector <<deprecated>> {
+        + BuildingSelector(AgentInfo, WorldInfo, ScenarioInfo, ModuleManager, DevelopData)
+        --
+        + {abstract} calc() : BuildingSelector
+        + precompute(PrecomputeData) : BuildingSelector
+        + resume(PrecomputeData) : BuildingSelector
+        + preparate() : BuildingSelector
+        + updateInfo(MessageManager) : BuildingSelector
+    }
+
+    abstract class HumanSelector <<deprecated>> {
+        + HumanSelector(AgentInfo, WorldInfo, ScenarioInfo, ModuleManager, DevelopData)
+        --
+        + {abstract} calc() : HumanSelector
+        + precompute(PrecomputeData) : HumanSelector
+        + resume(PrecomputeData) : HumanSelector
+        + preparate() : HumanSelector
+        + updateInfo(MessageManager) : HumanSelector
+    }
+
+    abstract class RoadSelector <<deprecated>> {
+        + RoadSelector(AgentInfo, WorldInfo, ScenarioInfo, ModuleManager, DevelopData)
+        --
+        + {abstract} calc() : RoadSelector
+        + precompute(PrecomputeData) : RoadSelector
+        + resume(PrecomputeData) : RoadSelector
+        + preparate() : RoadSelector
+        + updateInfo(MessageManager) : RoadSelector
+    }
+
+    abstract class TargetAllocator {
+        + TargetAllocator(AgentInfo, WorldInfo, ScenarioInfo, ModuleManager, DevelopData)
+        --
+        + {abstract} calc() : TargetAllocator
+        + {abstract} getResult() : Map<EntityID, EntityID>
+        + precompute(PrecomputeData) : TargetAllocator
+        + resume(PrecomputeData) : TargetAllocator
+        + preparate() : TargetAllocator
+        + updateInfo(MessageManager) : TargetAllocator
+    }
+
+    abstract class AmbulanceTargetAllocator {
+        + AmbulanceTargetAllocator(AgentInfo, WorldInfo, ScenarioInfo, ModuleManager, DevelopData)
+        --
+        + {abstract} calc() : AmbulanceTargetAllocator
+        + {abstract} getResult() : Map<EntityID, EntityID>
+        + resume(PrecomputeData) : AmbulanceTargetAllocator
+        + preparate() : AmbulanceTargetAllocator
+        + updateInfo(MessageManager) : AmbulanceTargetAllocator
+    }
+
+    abstract class FireTargetAllocator {
+        + FireTargetAllocator(AgentInfo, WorldInfo, ScenarioInfo, ModuleManager, DevelopData)
+        --
+        + {abstract} calc() : FireTargetAllocator
+        + {abstract} getResult() : Map<EntityID, EntityID>
+        + resume(PrecomputeData) : FireTargetAllocator
+        + preparate() : FireTargetAllocator
+        + updateInfo(MessageManager) : FireTargetAllocator
+    }
+
+    abstract class PoliceTargetAllocator {
+        + PoliceTargetAllocator(AgentInfo, WorldInfo, ScenarioInfo, ModuleManager, DevelopData)
+        --
+        + {abstract} calc() : PoliceTargetAllocator
+        + {abstract} getResult() : Map<EntityID, EntityID>
+        + resume(PrecomputeData) : PoliceTargetAllocator
+        + preparate() : PoliceTargetAllocator
+        + updateInfo(MessageManager) : PoliceTargetAllocator
+    }
+}
+
+AbstractModule <|-- TargetDetector
+AbstractModule <|-- TargetAllocator
+
+TargetDetector <|-- Search : E = Area
+TargetDetector <|-- BuildingDetector : E = Building
+TargetDetector <|-- HumanDetector : E = Human
+TargetDetector <|-- RoadDetector : E = Road
+TargetDetector <|-- TargetSelector
+
+BuildingDetector <|-- BuildingSelector
+HumanDetector <|-- HumanSelector
+RoadDetector <|-- RoadSelector
+
+TargetAllocator <|-- AmbulanceTargetAllocator
+TargetAllocator <|-- FireTargetAllocator
+TargetAllocator <|-- PoliceTargetAllocator
+
+note bottom of TargetAllocator
+  precompute(PrecomputeData) is declared final
+  on TargetAllocator.
+end note
+
+@enduml

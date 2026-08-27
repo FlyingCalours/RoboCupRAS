@@ -1,0 +1,109 @@
+@startuml 08_component_tactics
+' adf-core-java (core-docs) - adf.core.component.tactics.*
+' Source: core-docs/component/tactics/{Tactics, TacticsCenter}.md
+
+skinparam classAttributeIconSize 0
+skinparam ClassBackgroundColor #FDFDFD
+skinparam ClassBorderColor #444444
+hide empty members
+
+package "adf.core.component.tactics" {
+
+    abstract class Tactics {
+        - parentTactics : Tactics
+        - modules : List<AbstractModule>
+        - modulesExtAction : List<ExtAction>
+        - modulesCommandExecutor : List<CommandExecutor>
+        --
+        + Tactics()
+        + Tactics(Tactics)
+        --
+        .. lifecycle ..
+        + {abstract} initialize(AgentInfo, WorldInfo, ScenarioInfo, ModuleManager, MessageManager, DevelopData) : void
+        + {abstract} precompute(AgentInfo, WorldInfo, ScenarioInfo, ModuleManager, PrecomputeData, DevelopData) : void
+        + {abstract} resume(AgentInfo, WorldInfo, ScenarioInfo, ModuleManager, PrecomputeData, DevelopData) : void
+        + {abstract} preparate(AgentInfo, WorldInfo, ScenarioInfo, ModuleManager, DevelopData) : void
+        + {abstract} think(AgentInfo, WorldInfo, ScenarioInfo, ModuleManager, MessageManager, DevelopData) : Action
+        --
+        .. module registration ..
+        # registerModule(AbstractModule) : void
+        # registerModule(ExtAction) : void
+        # registerModule(CommandExecutor) : void
+        # unregisterModule(AbstractModule) : boolean
+        # unregisterModule(ExtAction) : boolean
+        # unregisterModule(CommandExecutor) : boolean
+        --
+        .. module lifecycle fan-out ..
+        # modulesPrecompute(PrecomputeData) : void
+        # modulesResume(PrecomputeData) : void
+        # modulesPreparate() : void
+        # modulesUpdateInfo(MessageManager) : void
+        --
+        + getParentTactics() : Tactics
+    }
+
+    abstract class TacticsAmbulanceTeam {
+        + TacticsAmbulanceTeam()
+        + TacticsAmbulanceTeam(Tactics)
+    }
+
+    abstract class TacticsFireBrigade {
+        + TacticsFireBrigade()
+        + TacticsFireBrigade(Tactics)
+    }
+
+    abstract class TacticsPoliceForce {
+        + TacticsPoliceForce()
+        + TacticsPoliceForce(Tactics)
+    }
+
+    abstract class TacticsCenter {
+        + TacticsCenter()
+        + TacticsCenter(TacticsCenter)
+        --
+        .. lifecycle ..
+        + {abstract} initialize(AgentInfo, WorldInfo, ScenarioInfo, ModuleManager, MessageManager, DevelopData) : void
+        + {abstract} resume(AgentInfo, WorldInfo, ScenarioInfo, ModuleManager, PrecomputeData, DevelopData) : void
+        + {abstract} preparate(AgentInfo, WorldInfo, ScenarioInfo, ModuleManager, DevelopData) : void
+        + {abstract} think(AgentInfo, WorldInfo, ScenarioInfo, ModuleManager, MessageManager, DevelopData) : void
+        --
+        .. module registration ..
+        # registerModule(AbstractModule) : void
+        # registerModule(CommandPicker) : void
+        # unregisterModule(AbstractModule) : boolean
+        # unregisterModule(CommandPicker) : boolean
+        --
+        .. module lifecycle fan-out ..
+        # modulesPrecompute(PrecomputeData) : void
+        # modulesResume(PrecomputeData) : void
+        # modulesPreparate() : void
+        # modulesUpdateInfo(MessageManager) : void
+        --
+        + getParentControl() : TacticsCenter
+    }
+
+    abstract class TacticsAmbulanceCentre {
+        + TacticsAmbulanceCentre()
+        + TacticsAmbulanceCentre(TacticsCenter)
+    }
+
+    abstract class TacticsFireStation {
+        + TacticsFireStation()
+        + TacticsFireStation(TacticsCenter)
+    }
+
+    abstract class TacticsPoliceOffice {
+        + TacticsPoliceOffice()
+        + TacticsPoliceOffice(TacticsCenter)
+    }
+}
+
+Tactics <|-- TacticsAmbulanceTeam
+Tactics <|-- TacticsFireBrigade
+Tactics <|-- TacticsPoliceForce
+
+TacticsCenter <|-- TacticsAmbulanceCentre
+TacticsCenter <|-- TacticsFireStation
+TacticsCenter <|-- TacticsPoliceOffice
+
+@enduml

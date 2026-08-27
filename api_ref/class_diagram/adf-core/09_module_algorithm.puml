@@ -1,0 +1,111 @@
+@startuml 09_module_algorithm
+' adf-core-java (core-docs)
+'   adf.core.component.module.AbstractModule
+'   adf.core.component.module.algorithm.*
+' Source: core-docs/component/module/AbstractModule.md
+'         core-docs/component/module/algorithm/**
+
+skinparam classAttributeIconSize 0
+skinparam ClassBackgroundColor #FDFDFD
+skinparam ClassBorderColor #444444
+hide empty members
+
+package "adf.core.component.module" {
+
+    abstract class AbstractModule {
+        # agentInfo : AgentInfo
+        # worldInfo : WorldInfo
+        # scenarioInfo : ScenarioInfo
+        # moduleManager : ModuleManager
+        # developData : DevelopData
+        - countPrecompute : int
+        - countResume : int
+        - countPreparate : int
+        - countUpdateInfo : int
+        - subModules : List<AbstractModule>
+        --
+        + AbstractModule(AgentInfo, WorldInfo, ScenarioInfo, ModuleManager, DevelopData)
+        --
+        .. lifecycle ..
+        + precompute(PrecomputeData) : AbstractModule
+        + resume(PrecomputeData) : AbstractModule
+        + preparate() : AbstractModule
+        + updateInfo(MessageManager) : AbstractModule
+        + {abstract} calc() : AbstractModule
+        --
+        .. sub modules ..
+        # registerModule(AbstractModule) : void
+        # unregisterModule(AbstractModule) : boolean
+        --
+        .. call counters ..
+        + getCountPrecompute() : int
+        + getCountResume() : int
+        + getCountPreparate() : int
+        + getCountUpdateInfo() : int
+        + resetCountPrecompute() : void
+        + resetCountResume() : void
+        + resetCountPreparate() : void
+        + resetCountUpdateInfo() : void
+    }
+}
+
+package "adf.core.component.module.algorithm" {
+
+    abstract class PathPlanning {
+        + PathPlanning(AgentInfo, WorldInfo, ScenarioInfo, ModuleManager, DevelopData)
+        --
+        + {abstract} setFrom(EntityID) : PathPlanning
+        + {abstract} setDestination(Collection<EntityID>) : PathPlanning
+        + setDestination(EntityID...) : PathPlanning
+        + {abstract} getResult() : List<EntityID>
+        + getResult(EntityID, EntityID) : List<EntityID>
+        + getDistance() : double
+        + getDistance(EntityID, EntityID) : double
+        --
+        + precompute(PrecomputeData) : PathPlanning
+        + resume(PrecomputeData) : PathPlanning
+        + preparate() : PathPlanning
+        + updateInfo(MessageManager) : PathPlanning
+        + {abstract} calc() : PathPlanning
+    }
+
+    abstract class Clustering {
+        + Clustering(AgentInfo, WorldInfo, ScenarioInfo, ModuleManager, DevelopData)
+        --
+        + {abstract} getClusterNumber() : int
+        + {abstract} getClusterIndex(StandardEntity) : int
+        + {abstract} getClusterIndex(EntityID) : int
+        + {abstract} getClusterEntities(int) : Collection<StandardEntity>
+        + {abstract} getClusterEntityIDs(int) : Collection<EntityID>
+        + getAllClusterEntities() : List<Collection<StandardEntity>>
+        + getAllClusterEntityIDs() : List<Collection<EntityID>>
+        --
+        + precompute(PrecomputeData) : Clustering
+        + resume(PrecomputeData) : Clustering
+        + preparate() : Clustering
+        + updateInfo(MessageManager) : Clustering
+        + {abstract} calc() : Clustering
+    }
+
+    abstract class StaticClustering {
+        + StaticClustering(AgentInfo, WorldInfo, ScenarioInfo, ModuleManager, DevelopData)
+    }
+
+    abstract class DynamicClustering {
+        + DynamicClustering(AgentInfo, WorldInfo, ScenarioInfo, ModuleManager, DevelopData)
+    }
+}
+
+AbstractModule <|-- PathPlanning
+AbstractModule <|-- Clustering
+Clustering <|-- StaticClustering
+Clustering <|-- DynamicClustering
+
+note bottom of AbstractModule
+  The complex modules (Search, TargetDetector,
+  TargetAllocator and their subclasses) also
+  extend AbstractModule -
+  see 10_module_complex.puml
+end note
+
+@enduml

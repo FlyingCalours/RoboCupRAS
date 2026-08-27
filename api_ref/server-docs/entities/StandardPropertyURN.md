@@ -2,8 +2,8 @@
 
 `rescuecore2.standard.entities.StandardPropertyURN`
 
-```
-enum StandardPropertyURN
+```java
+public enum StandardPropertyURN implements URN
 ```
 
 **StandardPropertyURN** identifies **one property of an entity**. You need it when working with raw `Property` objects — mainly when inspecting a `ChangeSet` to find out *what* changed rather than just *which entity* changed.

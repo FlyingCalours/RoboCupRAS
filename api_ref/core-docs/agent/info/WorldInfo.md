@@ -1,6 +1,13 @@
 # WorldInfo.java
 
 ```java
+public class WorldInfo implements Iterable<StandardEntity>
+```
+
+*Note : Iterable is built-in interface*
+
+**Constructor :**
+```java
 WorldInfo(
     @Nonnull StandardWorldModel world
 );

@@ -1,6 +1,13 @@
 # StandardMessageBundle.java
 
+```java
+public class StandardMessageBundle extends MessageBundle
 ```
+
+[Read MessageBundle](../../../component/communication/MessageBundle.md)
+
+**Constructor :**
+```java
 StandardMessageBundle();
 ```
 

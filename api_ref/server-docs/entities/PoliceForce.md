@@ -2,7 +2,16 @@
 
 `rescuecore2.standard.entities.PoliceForce`
 
+```java
+public class PoliceForce extends Human
 ```
+
+[Read Human](Human.md)
+
+[Read StandardEntity](StandardEntity.md)
+
+**Constructor :**
+```java
 PoliceForce(EntityID id);
 PoliceForce(PoliceForce other);
 ```

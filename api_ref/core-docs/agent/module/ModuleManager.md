@@ -1,6 +1,11 @@
 # ModuleManager.java
 
+```java
+public class ModuleManager
 ```
+
+**Constructor :**
+```java
 ModuleManager(
     @Nonnull AgentInfo agentInfo,
     @Nonnull WorldInfo worldInfo,
