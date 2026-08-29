@@ -1,6 +1,11 @@
 # CommunicationMessage.java
 
+```java
+abstract public class CommunicationMessage
 ```
+
+**Constructor :**
+```java
 CommunicationMessage(boolean isRadio);
 ```
 

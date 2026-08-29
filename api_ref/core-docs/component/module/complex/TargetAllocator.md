@@ -1,6 +1,13 @@
 # TargetAllocator.java
 
 ```java
+public abstract class TargetAllocator extends AbstractModule
+```
+
+[Read AbstractModule](../AbstractModule.md)
+
+**Constructor :**
+```java
 TargetAllocator(
     AgentInfo ai, 
     WorldInfo wi, 

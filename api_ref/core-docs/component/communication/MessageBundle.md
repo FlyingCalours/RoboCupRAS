@@ -1,8 +1,10 @@
 # MessageBundle.java
 
+```java
+abstract public class MessageBundle
 ```
-abstract class MessageBundle
-```
+
+**No Constructor :**
 
 **MessageBundle** is the **shared dictionary of message types**. Sender and receiver encode messages as small indices, so every agent in the team must register the same bundle in the same order — otherwise decoding produces garbage. The ready made bundle is `StandardMessageBundle`.
 

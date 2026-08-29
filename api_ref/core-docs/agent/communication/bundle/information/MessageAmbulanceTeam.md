@@ -5,6 +5,7 @@ public class MessageAmbulanceTeam extends StandardMessage
 ```
 
 [Read StandardMessage](../StandardMessage.md)
+
 [Read CommunicationMessage](../../../../component/communication/CommunicationMessage.md)
 
 

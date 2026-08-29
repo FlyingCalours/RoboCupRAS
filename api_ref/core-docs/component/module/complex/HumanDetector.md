@@ -1,6 +1,16 @@
 # HumanDetector.java
 
 ```java
+public abstract class HumanDetector extends TargetDetector<Human>
+```
+
+[Read TargetDetector](./TargetDetector.md)
+
+[Read StandardEntity](../../../../server-docs/entities/StandardEntity.md)
+
+[Read AbstractModule](../AbstractModule.md)
+
+```java
 HumanDetector(
     AgentInfo ai, 
     WorldInfo wi, 

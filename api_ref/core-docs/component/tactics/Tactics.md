@@ -1,6 +1,11 @@
 # Tactics.java
 
+```java
+public abstract class Tactics
 ```
+
+**Constructor :**
+```java
 Tactics();
 Tactics(Tactics parent);
 ```

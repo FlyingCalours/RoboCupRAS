@@ -5,6 +5,7 @@ public class MessageBuilding extends StandardMessage
 ```
 
 [Read StandardMessage](../StandardMessage.md)
+
 [Read CommunicationMessage](../../../../component/communication/CommunicationMessage.md)
 
 

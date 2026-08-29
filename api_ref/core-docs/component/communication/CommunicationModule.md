@@ -1,8 +1,10 @@
 # CommunicationModule.java
 
+```java
+abstract public class CommunicationModule
 ```
-abstract class CommunicationModule
-```
+
+**No Constructor**
 
 **CommunicationModule** is the **transport layer** between your `MessageManager` and the rescuecore2 protocol. The default implementation, `StandardCommunicationModule`, encodes queued messages into `AKSpeak` commands and decodes what the agent heard into `CommunicationMessage` objects. You normally never touch it — it is selected in the launcher, not in `module.cfg`.
 

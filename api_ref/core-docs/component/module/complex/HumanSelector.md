@@ -1,6 +1,18 @@
 # HumanSelector.java
 
 ```java
+public abstract class HumanSelector extends HumanDetector
+```
+
+[Read HumanDetector](./HumanDetector.md)
+
+[Read TargetDetector](./TargetDetector.md)
+
+[Read StandardEntity](../../../../server-docs/entities/StandardEntity.md)
+
+[Read AbstractModule](../AbstractModule.md)
+
+```java
 HumanSelector(
     AgentInfo ai, 
     WorldInfo wi, 

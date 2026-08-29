@@ -1,6 +1,13 @@
 # Clustering.java
 
 ```java
+public abstract class Clustering extends AbstractModule
+```
+
+[Read AbstractModule](../AbstractModule.md)
+
+**Constructor :**
+```java
 Clustering(
     AgentInfo ai, 
     WorldInfo wi, 

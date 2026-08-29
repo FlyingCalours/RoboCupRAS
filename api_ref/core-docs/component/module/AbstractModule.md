@@ -1,6 +1,11 @@
 # AbstractModule.java
 
+```java
+public abstract class AbstractModule
 ```
+
+**Constructor :**
+```java
 AbstractModule(
     AgentInfo ai,
     WorldInfo wi,

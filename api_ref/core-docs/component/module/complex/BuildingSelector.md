@@ -1,6 +1,19 @@
 # BuildingSelector.java
 
 ```java
+public abstract class BuildingSelector extends BuildingDetector
+```
+
+[Read BuildingDetector](./BuildingDetector.md)
+
+[Read TargetDetector](./TargetDetector.md)
+
+[Read StandardEntity](../../../../server-docs/entities/StandardEntity.md)
+
+[Read AbstractModule](../AbstractModule.md)
+
+**Constructor :**
+```java
 BuildingSelector(
     AgentInfo ai, 
     WorldInfo wi, 

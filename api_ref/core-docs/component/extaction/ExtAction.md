@@ -1,6 +1,11 @@
 # ExtAction.java
 
 ```java
+abstract public class ExtAction
+```
+
+**Constructor :**
+```java
 ExtAction(
     AgentInfo ai, 
     WorldInfo wi, 

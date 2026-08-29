@@ -1,6 +1,14 @@
 # AmbulanceTargetAllocator.java
 
 ```java
+public abstract class AmbulanceTargetAllocator extends TargetAllocator
+```
+
+[Read TargetAllocator](./TargetAllocator.md)
+
+[Read AbstractModule](../AbstractModule.md)
+
+```java
 AmbulanceTargetAllocator(
     AgentInfo ai, 
     WorldInfo wi, 

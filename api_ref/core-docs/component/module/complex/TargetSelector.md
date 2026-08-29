@@ -1,6 +1,17 @@
 # TargetSelector.java
 
 ```java
+public abstract class TargetSelector<E extends StandardEntity> extends TargetDetector<E>
+```
+
+[Read TargetDetector](./TargetDetector.md)
+
+[Read StandardEntity](../../../../server-docs/entities/StandardEntity.md)
+
+[Read AbstractModule](../AbstractModule.md)
+
+**Constructor :**
+```java
 TargetSelector(
     AgentInfo ai, 
     WorldInfo wi, 
@@ -9,6 +20,7 @@ TargetSelector(
     DevelopData developData
 );
 ```
+
 
 [Attributes Stored](#attributes-stored)
 

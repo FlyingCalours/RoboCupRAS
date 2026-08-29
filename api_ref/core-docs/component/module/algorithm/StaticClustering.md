@@ -1,6 +1,15 @@
 # StaticClustering.java
 
 ```java
+public abstract class StaticClustering extends Clustering
+```
+
+[Read Clustering](./Clustering.md)
+
+[Read AbstractModule](../AbstractModule.md)
+
+**Constructor :**
+```java
 StaticClustering(
     AgentInfo ai, 
     WorldInfo wi, 

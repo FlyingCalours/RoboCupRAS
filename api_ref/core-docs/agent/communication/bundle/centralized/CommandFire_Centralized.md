@@ -7,6 +7,7 @@ public class CommandFire extends StandardMessage
 ```
 
 [Read StandardMessage](../StandardMessage.md)
+
 [Read CommunicationMessage](../../../../component/communication/CommunicationMessage.md)
 
 ```java

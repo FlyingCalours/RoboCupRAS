@@ -1,6 +1,14 @@
 # DynamicClustering.java
 
 ```java
+public abstract class DynamicClustering extends Clustering
+```
+
+[Read Clustering](Clustering.md)
+
+[Read AbstractModule](../AbstractModule.md)
+
+```java
 DynamicClustering(
     AgentInfo ai, 
     WorldInfo wi, 

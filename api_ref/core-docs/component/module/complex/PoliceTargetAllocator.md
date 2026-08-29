@@ -1,6 +1,15 @@
 # PoliceTargetAllocator.java
 
 ```java
+public abstract class PoliceTargetAllocator extends TargetAllocator
+```
+
+[Read TargetAllocator](./TargetAllocator.md)
+
+[Read AbstractModule](../AbstractModule.md)
+
+**Constructor :**
+```java
 PoliceTargetAllocator(
     AgentInfo ai, 
     WorldInfo wi, 

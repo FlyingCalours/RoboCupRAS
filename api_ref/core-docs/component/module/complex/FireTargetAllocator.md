@@ -1,9 +1,18 @@
 # FireTargetAllocator.java
 
 ```java
+public abstract class FireTargetAllocator extends TargetAllocator
+```
+
+[Read TargetAllocator](./TargetAllocator.md)
+
+[Read AbstractModule](../AbstractModule.md)
+
+**Constructor :**
+```java
 FireTargetAllocator(
     AgentInfo ai, 
-    WorldInfo wi, 
+    WorldInfo wi,
     ScenarioInfo si, 
     ModuleManager moduleManager, 
     DevelopData developData
