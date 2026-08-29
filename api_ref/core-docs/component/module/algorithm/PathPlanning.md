@@ -1,6 +1,14 @@
 # PathPlanning.java
 
 ```java
+public abstract class PathPlanning extends AbstractModule
+```
+
+[Read AbstractModule](../AbstractModule.md)
+
+
+**Constructor :**
+```java
 PathPlanning(
     AgentInfo ai, 
     WorldInfo wi, 

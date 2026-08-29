@@ -1,6 +1,15 @@
 # TargetDetector.java
 
 ```java
+public abstract class TargetDetector<E extends StandardEntity> extends AbstractModule
+```
+
+[Read StandardEntity](../../../../server-docs/entities/StandardEntity.md)
+
+[Read AbstractModule](../AbstractModule.md)
+
+**Constructor :**
+```java
 TargetDetector(
     AgentInfo ai, 
     WorldInfo wi, 

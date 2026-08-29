@@ -1,6 +1,16 @@
 # Search.java
 
 ```java
+public abstract class Search extends TargetDetector<Area>
+```
+
+[Read TargetDetector](./TargetDetector.md)
+
+[Read StandardEntity](../../../../server-docs/entities/StandardEntity.md)
+
+[Read AbstractModule](../AbstractModule.md)
+
+```java
 Search(
     AgentInfo ai, 
     WorldInfo wi, 

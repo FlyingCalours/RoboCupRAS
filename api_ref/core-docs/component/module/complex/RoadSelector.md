@@ -1,6 +1,19 @@
 # RoadSelector.java
 
 ```java
+public abstract class RoadSelector extends RoadDetector
+```
+
+[Read RoadDetector](./RoadDetector.md)
+
+[Read TargetDetector](./TargetDetector.md)
+
+[Read StandardEntity](../../../../server-docs/entities/StandardEntity.md)
+
+[Read AbstractModule](../AbstractModule.md)
+
+**Constructor :**
+```java
 RoadSelector(
     AgentInfo ai, 
     WorldInfo wi, 
