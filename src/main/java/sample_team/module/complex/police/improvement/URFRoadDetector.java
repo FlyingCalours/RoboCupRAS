@@ -1,311 +1,163 @@
 package sample_team.module.complex.police.improvement;
 
-
-import adf.core.agent.info.AgentInfo;
-import adf.core.agent.info.WorldInfo;
-import adf.core.agent.info.ScenarioInfo;
-import adf.core.agent.module.ModuleManager;
 import adf.core.agent.develop.DevelopData;
-
-
-import adf.core.agent.communication.MessageManager;
-
-import adf.core.agent.precompute.PrecomputeData;
-import adf.core.component.module.algorithm.PathPlanning;
+import adf.core.agent.info.AgentInfo;
+import adf.core.agent.info.ScenarioInfo;
+import adf.core.agent.info.WorldInfo;
+import adf.core.agent.module.ModuleManager;
 import adf.core.component.module.complex.RoadDetector;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import rescuecore2.standard.entities.Area;
-import rescuecore2.standard.entities.Blockade;
 import rescuecore2.standard.entities.Road;
 import rescuecore2.standard.entities.StandardEntity;
 import rescuecore2.standard.entities.StandardEntityURN;
-import rescuecore2.worldmodel.Entity;
 import rescuecore2.worldmodel.EntityID;
 
-
-public class URFRoadDetector extends RoadDetector{
-
-    private PathPlanning pathPlanning;
-    private EntityID result;
-
-    private Map<EntityID, Collection<EntityID>> neighbourGraph;
-    private Set<EntityID> allRoads;
-    private Set<EntityID> refugeRoads;
-    private int maxNumberOfNeighbours;
-    private boolean initialised;
-
-    private Set<EntityID> seenRoads;
-    private Set<EntityID> blockedRoads;
-    private Set<EntityID> clearedRoads;
-
-    private static final int TARGET_PATIENCE = 30;
-    private int targetChosenAt;
-
-    public URFRoadDetector(AgentInfo ai, WorldInfo wi, ScenarioInfo si, ModuleManager moduleManager, DevelopData developData){
-        super(ai,wi,si,moduleManager,developData);
-
-        this.pathPlanning = moduleManager.getModule(
-            "URFRoadDetector.PathPlanning",
-            "adf.impl.module.algorithm.DijkstraPathPlanning"
-        );
-        registerModule(this.pathPlanning);
-
-        this.result= null;
-
-        this.neighbourGraph = new HashMap<>();
-        this.allRoads = new HashSet<>();
-        this.refugeRoads = new HashSet<>();
-        this.maxNumberOfNeighbours = 1;
-        this.initialised = false;
+import sample_team.module.complex.police.observation.URFPoliceMetrics;
+import sample_team.module.complex.police.improvement.URFPoliceEscape;
 
 
-        this.seenRoads = new HashSet<>();
-        this.blockedRoads = new HashSet<>();
-        this.clearedRoads = new HashSet<>();
+/**
+ * Decides WHICH road the police force should open.
+ *
+ * Rule: if I am standing on a blocked road, that one. Otherwise the nearest
+ * blocked road I know about. Keep the target until it is clear.
+ *
+ * This module also owns position observation. It runs first inside
+ * DefaultTacticsPoliceForce.think(), so it is the only safe place to advance
+ * the metrics clock. URFPoliceStuckDetector cannot work without it.
+ */
+public class URFRoadDetector extends RoadDetector {
+
+  private final URFPoliceMetrics metrics;
+
+  private EntityID result;
+
+  private final URFPoliceEscape escape;
+
+  /**
+   * Creates the detector and attaches it to this agent's metrics record.
+   *
+   * @param ai agent information supplied by the ADF
+   * @param wi world model supplied by the ADF
+   * @param si scenario configuration supplied by the ADF
+   * @param moduleManager module registry supplied by the ADF
+   * @param developData development configuration supplied by the ADF
+   */
+  public URFRoadDetector(AgentInfo ai, WorldInfo wi, ScenarioInfo si,
+      ModuleManager moduleManager, DevelopData developData) {
+    super(ai, wi, si, moduleManager, developData);
+
+    this.metrics = URFPoliceMetrics.forAgent(ai.getID());
+    this.result = null;
+    this.escape = URFPoliceEscape.forAgent(ai.getID());
+  }
+
+  /**
+   * Returns the road chosen by the most recent call to calc().
+   *
+   * @return the target road id, or null when no blocked road is known
+   */
+  @Override
+  public EntityID getTarget() {
+    return this.result;
+  }
+
+  /**
+   * Picks the target road for this timestep and records the agent's position
+   * into the metrics.
+   *
+   * The position must be recorded here, before any other metrics call in the
+   * timestep, because recordPosition is what advances the metrics clock. If it
+   * is skipped, URFPoliceStuckDetector.evaluate() sees a repeated timestep and
+   * silently does nothing for the whole run.
+   *
+   * @return this module, as required by the ADF module contract
+   */
+  @Override
+  public RoadDetector calc() {
+
+    EntityID position = this.agentInfo.getPosition();
+
+    // Observation first. Never place this behind an early return.
+    this.metrics.recordPosition(
+      this.agentInfo.getTime(),
+      position,
+      this.agentInfo.getX(), 
+      this.agentInfo.getY()
+    );
+
+    this.escape.update(
+      this.agentInfo.getTime(), 
+      position,
+      this.agentInfo.getX(), 
+      this.agentInfo.getY()
+    );
+
+    this.result = this.chooseRoad(position);
+
+    this.metrics.recordTarget(this.result);
+
+    // Can Add Logging of system.out.println here
+    return this;
+  }
+
+  /**
+   * Applies the target selection rule.
+   *
+   * @param position the area the agent currently occupies
+   *
+   * @return the road to open, or null when no blocked road is known
+   */
+  private EntityID chooseRoad(EntityID position) {
+
+    // Standing in rubble beats everything else.
+    if (this.isBlocked(position)) {
+      return position;
     }
 
-    /*
-        SET allRoads 
-        SET maxNumberOfNeighbours
-
-    */
-    private void buildStaticMap(){
-        if (this.initialised) return;
-
-        Collection<StandardEntity> allEntities = this.worldInfo.getAllEntities();
-
-        // SET allRoads , Road extends Area extends StandardEntity
-        for(StandardEntity entity : allEntities){
-            if (!(entity instanceof Area)) {continue;}
-
-            Area area = (Area) entity;
-            List<EntityID> neighbours = area.getNeighbours();
-            EntityID areaEntityID = area.getID();
-            this.neighbourGraph.put(areaEntityID, new ArrayList<>(area.getNeighbours()));
-
-            if(area instanceof Road){
-                this.allRoads.add(areaEntityID);
-                if(neighbours.size() > this.maxNumberOfNeighbours){
-                    this.maxNumberOfNeighbours = neighbours.size();
-                }
-            }
-        }
-
-        Collection<EntityID> allRefugees = this.worldInfo.getEntityIDsOfType(StandardEntityURN.REFUGE);
-
-        for(EntityID refugeID : allRefugees){
-            Collection<EntityID> neighbours = this.neighbourGraph.get(refugeID);
-            if(neighbours == null){continue;}
-
-            for(EntityID neighbourID : neighbours){
-                if(this.allRoads.contains(neighbourID)){
-                    this.refugeRoads.add(neighbourID);
-                }
-            }
-        }
-
-
-        this.initialised = true;
-
-        System.out.println(
-            "URF MAP roads = " + this.allRoads.size() + "\n" +
-            "refugeRoads = " + this.refugeRoads.size() + "\n" +
-            "maxNumberOfNeighbours = " + this.maxNumberOfNeighbours
-            );
+    // Keep the previous target while it is still blocked.
+    if (this.isBlocked(this.result)) {
+      return this.result;
     }
 
-    @Override
-    public EntityID getTarget() {
-        return this.result;
+    EntityID best = null;
+    int bestDistance = Integer.MAX_VALUE;
+
+    for (StandardEntity entity : this.worldInfo
+        .getEntitiesOfType(StandardEntityURN.ROAD)) {
+
+      EntityID roadID = entity.getID();
+      if (!this.isBlocked(roadID)) {
+        continue;
+      }
+      int distance = this.worldInfo.getDistance(position, roadID);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        best = roadID;
+      }
     }
 
-    @Override
-    public RoadDetector calc() {
-        this.buildStaticMap();
-        EntityID position = this.agentInfo.getPosition();
+    return best;
+  }
 
-        StandardEntity here = this.worldInfo.getEntity(position);
-        if (here instanceof Road && this.isStillBlocked((Road) here)) {
-            this.result = position;
-            return this;
-        }
-
-        if (this.result != null) {
-            boolean expired =
-                (this.agentInfo.getTime() - this.targetChosenAt) > TARGET_PATIENCE;
-            if (!this.isDone(this.result) && !expired) {
-                return this;
-            }
-            if (expired) {
-                this.blockedRoads.remove(this.result);
-                this.seenRoads.add(this.result);
-            }
-            this.result = null;
-        }
-
-        Set<EntityID> visited = new HashSet<>();
-        visited.add(position);
-        this.result = this.sweep(Collections.singletonList(position), visited);
-
-        if (this.result != null) {
-            this.targetChosenAt = this.agentInfo.getTime();
-        }
-
-        System.out.println("URF_OBS t=" + this.agentInfo.getTime()
-            + " pos=" + this.agentInfo.getPosition().getValue()
-            + " target=" + (this.result == null ? "null" : this.result.getValue())
-            + " seen=" + this.seenRoads.size()
-            + " blocked=" + this.blockedRoads.size()
-            + " cleared=" + this.clearedRoads.size());
-
-        return this;
+  /**
+   * Reports whether the agent has actually observed blockades on an area.
+   *
+   * An unvisited road returns false even when it is blocked in reality,
+   * because isBlockadesDefined() stays false until the agent has seen it.
+   *
+   * @param id the area to test, may be null
+   *
+   * @return true when the entity is a road with at least one known blockade
+   */
+  private boolean isBlocked(EntityID id) {
+    if (id == null) {
+      return false;
     }
-
-    private void observeRoad(Road road) {
-        EntityID id = road.getID();
-        this.seenRoads.add(id);
-        if (!road.isBlockadesDefined()) {
-            return;
-        }
-
-        if (road.getBlockades().isEmpty()) {
-            this.blockedRoads.remove(id);
-            this.clearedRoads.add(id);
-        }
-        else {
-            this.clearedRoads.remove(id);
-            this.blockedRoads.add(id);
-        }
+    StandardEntity entity = this.worldInfo.getEntity(id);
+    if (!(entity instanceof Road)) {
+      return false;
     }
-
-    @Override
-    public RoadDetector updateInfo(MessageManager messageManager) {
-        super.updateInfo(messageManager);
-        if (this.getCountUpdateInfo() >= 2) {
-            return this;
-        }
-        this.buildStaticMap();
-
-        for (EntityID id : this.worldInfo.getChanged().getChangedEntities()) {
-            StandardEntity entity = this.worldInfo.getEntity(id);
-            if (entity instanceof Road) {
-                this.observeRoad((Road) entity);
-            }
-            else if (entity instanceof Blockade) {
-                Blockade blockade = (Blockade) entity;
-                if (blockade.isPositionDefined()) {
-                    EntityID roadID = blockade.getPosition();
-                    this.seenRoads.add(roadID);
-                    this.clearedRoads.remove(roadID);
-                    this.blockedRoads.add(roadID);
-                }
-            }
-        }
-
-        StandardEntity here = this.worldInfo.getEntity(this.agentInfo.getPosition());
-        if (here instanceof Area) {
-            if (here instanceof Road) {
-                    this.observeRoad((Road) here);
-            }
-
-            for (EntityID neighbourID : ((Area) here).getNeighbours()) {
-                StandardEntity neighbour = this.worldInfo.getEntity(neighbourID);
-
-                if (neighbour instanceof Road) {
-                    this.observeRoad((Road) neighbour);
-                }
-            }
-        }
-
-        /*
-        System.out.println(
-            "URF_OBS t=" + this.agentInfo.getTime()
-            + " seen=" + this.seenRoads.size()
-            + " blocked=" + this.blockedRoads.size()
-            + " cleared=" + this.clearedRoads.size());
-        */
-        return this;
-    }
-
-
-    private EntityID sweep(List<EntityID> ring, Set<EntityID> visited) {
-        if (ring.isEmpty()) {
-            return null;
-        }
-
-        List<EntityID> blockedHere = new ArrayList<>();
-        List<EntityID> unknownHere = new ArrayList<>();
-        List<EntityID> nextRing = new ArrayList<>();
-
-        for (EntityID areaID : ring) {
-            if (this.allRoads.contains(areaID)) {
-                if (this.blockedRoads.contains(areaID)) {
-                blockedHere.add(areaID);
-                } 
-                else if (!this.seenRoads.contains(areaID)) {
-                    unknownHere.add(areaID);
-                }
-            }
-
-            Collection<EntityID> neighbours = this.neighbourGraph.get(areaID);
-
-            if (neighbours == null) {
-                continue;
-            }
-
-            for (EntityID neighbourID : neighbours) {
-                if (visited.add(neighbourID)) {
-                    nextRing.add(neighbourID);
-                }
-            }
-        }
-
-        if (!blockedHere.isEmpty()) {
-            return this.pickOne(blockedHere);
-        }
-        if (!unknownHere.isEmpty()) {
-            return this.pickOne(unknownHere);
-        }
-        return this.sweep(nextRing, visited);
-    }
-
-    private EntityID pickOne(List<EntityID> candidates) {
-        if (candidates.size() == 1) {
-            return candidates.get(0);
-        }
-        List<EntityID> sorted = new ArrayList<>(candidates);
-        sorted.sort((a, b) -> Integer.compare(a.getValue(), b.getValue()));
-        int offset = Math.abs(this.agentInfo.getID().getValue()) % sorted.size();
-        return sorted.get(offset);
-    }
-
-    private boolean isDone(EntityID roadID) {
-        StandardEntity entity = this.worldInfo.getEntity(roadID);
-        if (!(entity instanceof Road)) {
-            return true;
-        }
-
-        Road road = (Road) entity;
-
-        if (!road.isBlockadesDefined()) {
-            return false;
-        }
-
-        return road.getBlockades().isEmpty();
-    }
-
-    private boolean isStillBlocked(Road road) {
-        return road.isBlockadesDefined() && !road.getBlockades().isEmpty();
-    }
-
-    
+    Road road = (Road) entity;
+    return road.isBlockadesDefined() && !road.getBlockades().isEmpty();
+  }
 }

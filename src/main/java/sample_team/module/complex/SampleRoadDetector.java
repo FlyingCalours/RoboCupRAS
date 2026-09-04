@@ -10,6 +10,7 @@ import adf.core.agent.precompute.PrecomputeData;
 import adf.core.component.module.algorithm.PathPlanning;
 import adf.core.component.module.complex.RoadDetector;
 import adf.core.debug.DefaultLogger;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -19,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.apache.log4j.Logger;
+
 import rescuecore2.standard.entities.Area;
 import rescuecore2.standard.entities.Blockade;
 import rescuecore2.standard.entities.Road;
