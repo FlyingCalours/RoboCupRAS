@@ -1,4 +1,4 @@
-package urf.police.observation;
+package sample_team.module.complex.police.observation;
 
 import adf.core.agent.action.Action;
 import adf.core.agent.action.common.ActionMove;
