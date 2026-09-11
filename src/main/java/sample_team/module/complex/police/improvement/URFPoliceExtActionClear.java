@@ -1,5 +1,6 @@
 package sample_team.module.complex.police.improvement;
 
+
 import adf.core.agent.action.police.ActionClear;
 import adf.core.agent.develop.DevelopData;
 import adf.core.agent.info.AgentInfo;
@@ -7,291 +8,476 @@ import adf.core.agent.info.ScenarioInfo;
 import adf.core.agent.info.WorldInfo;
 import adf.core.agent.module.ModuleManager;
 import adf.core.component.extaction.ExtAction;
-
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
-import rescuecore2.standard.entities.Area;
 import rescuecore2.standard.entities.Blockade;
-import rescuecore2.standard.entities.PoliceForce;
 import rescuecore2.standard.entities.Road;
 import rescuecore2.standard.entities.StandardEntity;
 import rescuecore2.worldmodel.EntityID;
-
+import sample_team.module.complex.police.observation.URFPoliceCsvExporter;
 import sample_team.module.complex.police.observation.URFPoliceMetrics;
 import sample_team.module.complex.police.observation.URFPoliceStuckDetector;
-import sample_team.module.complex.police.improvement.URFPoliceEscape;
 
 /**
- * Returns ActionClear or null. Never returns ActionMove.
+ * Independent URF Police CLEAR action module.
  *
- * Rule: if there is a blockade on the road under my feet and I can reach it,
- * cut towards it. Otherwise null, and DefaultTacticsPoliceForce falls through
- * to URFPoliceExtActionMove.
+ * PI-1 design goals:
  *
- * It does not check whether the blockade is actually in the way. Clearing
- * rubble that was not blocking anything wastes a few timesteps but never
- * breaks the agent.
+ * 1. Do not inherit DefaultExtActionClear.
+ * 2. Do not inherit Sample decision logic.
+ * 3. Clear blockades on the Police agent's current Road.
+ * 4. Never generate ActionMove.
+ * 5. Return null when clearing is not appropriate so that
+ *    DefaultTacticsPoliceForce can continue to ExtActionMove.
+ * 6. Detect stagnant clearing using blockade repair cost.
+ * 7. Use deterministic directional clearing as recovery.
+ * 8. Preserve the trusted URF observation/CSV pipeline.
+ *
+ * IMPORTANT:
+ *
+ * This PI-1 module intentionally does NOT perform:
+ *
+ * - target selection,
+ * - global path planning,
+ * - Fire/Ambulance prioritisation,
+ * - multi-Police coordination,
+ * - exploration.
+ *
+ * Those responsibilities belong to later independent URF modules.
  */
-public class URFPoliceExtActionClear extends ExtAction {
+public final class URFPoliceExtActionClear extends ExtAction {
+  /**
+   * Number of consecutive clear attempts with no observed
+   * reduction in blockade repair cost before changing the
+   * clearing method.
+   */
+  private static final int STAGNANT_CLEAR_LIMIT = 3;
 
   /**
-   * Road target published for URFPoliceExtActionMove to read.
+   * Extra distance placed beyond the nearest blockade boundary
+   * during directional recovery.
    *
-   * DefaultTacticsPoliceForce hands the move module the Search target, not the
-   * RoadDetector target, so without this the police never walks to the road it
-   * was told to open. Keyed by agent id because every police agent in this JVM
-   * shares these statics.
+   * RCRS coordinates are expressed in world distance units.
    */
-  private static final Map<Integer, EntityID> TARGETS = new ConcurrentHashMap<>();
+  private static final double RECOVERY_EXTENSION = 1000.0;
 
-  private final URFPoliceMetrics metrics;
+  /**
+   * Small value used to detect a zero-length direction vector.
+   */
+  private static final double MIN_VECTOR_LENGTH = 1.0;
 
-  private final URFPoliceStuckDetector stuckDetector;
-
+  /**
+   * Maximum Police clear distance defined by the scenario.
+   */
   private final int clearDistance;
 
+  /**
+   * Trusted observation metrics from the frozen baseline.
+   */
+  private final URFPoliceMetrics metrics;
+
+  /**
+   * Trusted stuck detector from the frozen baseline.
+   */
+  private final URFPoliceStuckDetector stuckDetector;
+
+  /**
+   * Target supplied by DefaultTacticsPoliceForce.
+   *
+   * PI-1 does not perform target selection itself.
+   */
   private EntityID target;
 
-  private final URFPoliceEscape escape;
+  /**
+   * Blockade cleared during the previous clear attempt.
+   */
+  private EntityID previousClearBlockade;
 
   /**
-   * Creates the module and attaches it to this agent's observation objects.
-   *
-   * @param ai agent information supplied by the ADF
-   * @param wi world model supplied by the ADF
-   * @param si scenario configuration supplied by the ADF
-   * @param moduleManager module registry supplied by the ADF
-   * @param developData development configuration supplied by the ADF
+   * Previously observed repair cost.
    */
-  public URFPoliceExtActionClear(
-    AgentInfo ai, 
-    WorldInfo wi, 
-    ScenarioInfo si,
-    ModuleManager moduleManager, 
-    DevelopData developData) {
-    super(ai, wi, si, moduleManager, developData);
+  private int previousRepairCost;
 
-    int distance = si.getClearRepairDistance();
-    this.clearDistance = distance > 0 ? distance : 10000;
+  /**
+   * Number of consecutive attempts for which the same
+   * blockade did not show repair-cost improvement.
+   */
+  private int stagnantClearCount;
 
-    this.metrics = URFPoliceMetrics.forAgent(ai.getID());
-    this.stuckDetector = URFPoliceStuckDetector.forAgent(ai.getID());
+  /**
+   * Number of recovery-mode directional clears.
+   */
+  private int recoveryClearCount;
 
+  public URFPoliceExtActionClear(AgentInfo agentInfo, WorldInfo worldInfo, ScenarioInfo scenarioInfo, ModuleManager moduleManager, DevelopData developData) {
+    super(agentInfo, worldInfo, scenarioInfo, moduleManager, developData);
+    this.clearDistance = scenarioInfo.getClearRepairDistance();
+    this.metrics = URFPoliceMetrics.forAgent(agentInfo.getID());
+    this.stuckDetector = URFPoliceStuckDetector.forAgent(agentInfo.getID());
     this.target = null;
-    this.escape = URFPoliceEscape.forAgent(ai.getID());
+    this.previousClearBlockade = null;
+    this.previousRepairCost = -1;
+    this.stagnantClearCount = 0;
+    this.recoveryClearCount = 0;
   }
 
   /**
-   * Reads back the road target this module was given for an agent.
+   * Receive the target selected by the configured RoadDetector.
    *
-   * Called by URFPoliceExtActionMove so it can walk to the road the detector
-   * chose instead of the Search target the tactics class passes it.
-   *
-   * @param agentID the police force whose target is wanted, may be null
-   *
-   * @return the road target published this timestep, or null when the agent is
-   *   unknown or had no target
-   */
-  public static EntityID targetOf(EntityID agentID) {
-    return agentID == null ? null : TARGETS.get(agentID.getValue());
-  }
-
-  /**
-   * Accepts the target chosen by URFRoadDetector.
-   *
-   * A blockade is resolved to the road it sits on. Anything that is not an
-   * area is discarded.
-   *
-   * @param target the entity handed down by the tactics class, may be null
-   *
-   * @return this module, as required by the ADF ExtAction contract
+   * Target selection remains outside this class.
    */
   @Override
   public ExtAction setTarget(EntityID target) {
-    this.target = null;
-    if (target == null) {
-      return this;
-    }
-    StandardEntity entity = this.worldInfo.getEntity(target);
-    if (entity instanceof Blockade) {
-      this.target = ((Blockade) entity).getPosition();
-    } else if (entity instanceof Area) {
-      this.target = target;
-    }
+    this.target = target;
     return this;
   }
 
   /**
-   * Chooses this timestep's clear action, publishes the target for the move
-   * module, and records the outcome for observation.
+   * Calculate the Police CLEAR action.
    *
-   * The stuck detector is only evaluated when an action was produced, because
-   * a null result means URFPoliceExtActionMove still has to run and will
-   * evaluate instead. evaluate() ignores repeated calls within one timestep,
-   * so exactly one of the two takes effect.
+   * PI-1 rule:
    *
-   * @return this module, as required by the ADF ExtAction contract
+   * This method may return:
+   *
+   *   ActionClear
+   *   null
+   *
+   * It deliberately never returns ActionMove.
    */
   @Override
   public ExtAction calc() {
+
     long startNanos = System.nanoTime();
     this.result = null;
+    String decision = "NO_LOCAL_CLEAR";
+    ClearCandidate candidate = this.findCurrentRoadCandidate();
 
-    this.publishTarget();
+    if (candidate != null) {
+      if (candidate.distance <= this.clearDistance) {
+        this.updateClearProgress(candidate.blockade);
+        if (this.stagnantClearCount >= STAGNANT_CLEAR_LIMIT) {
+          this.result = this.createRecoveryClear(candidate);
+          this.recoveryClearCount++;
+          this.stagnantClearCount = 0;
+          decision = "RECOVERY_DIRECTIONAL_CLEAR";
+        } 
+        else {
+          /*
+           * Normal clearing.
+           *
+           * Use the blockade EntityID directly.
+           * No MOVE action is generated here.
+           */
+          this.result = new ActionClear(candidate.blockade);
+          decision = "CLEAR_NEAREST_BLOCKADE";
+        }
+      } 
+      else {
+        /*
+         * A blockade exists on the current road but is not
+         * yet inside the clear range.
+         *
+         * Return null.
+         *
+         * DefaultTacticsPoliceForce can therefore continue
+         * to the configured MOVE module.
+         */
+        this.resetPreviousClearAttempt();
+        decision = "BLOCKADE_OUTSIDE_CLEAR_RANGE_HANDOFF";
+      }
+    } 
+    else {
+      this.resetPreviousClearAttempt();
+      decision = "ROAD_CLEAR_OR_NO_LOCAL_BLOCKADE";
+    }
+    long elapsedNanos = System.nanoTime() - startNanos;
 
-    this.result = this.decideClear();
-
-    this.metrics.recordClearModuleResult(this.agentInfo.getTime(), this.target,
-        this.result, System.nanoTime() - startNanos);
-
+    /*
+     * Preserve the trusted observation pipeline.
+     *
+     * If result == null, URFObservedExtActionMove will
+     * record and export the final MOVE decision.
+     *
+     * If result != null, CLEAR is the final action and
+     * must be exported here.
+     */
+    this.metrics.recordClearModuleResult(this.agentInfo.getTime(), this.target, this.result, elapsedNanos);
     if (this.result != null) {
       this.stuckDetector.evaluate(this.metrics);
-      // Can Add Logging of system.out.println here
+      URFPoliceCsvExporter.export(this.metrics, this.stuckDetector);
+      System.out.println(this.metrics.toLogLine() + " " + this.stuckDetector.toLogFields() + " pi1ClearDecision=" + decision + " recoveryClearCount=" + this.recoveryClearCount);
     }
-
     return this;
   }
 
   /**
-   * Copies the current target into the shared map so the move module can read
-   * it, or removes the entry when there is no target.
-   *
-   * ConcurrentHashMap rejects null values, which is why removal is used
-   * instead of storing null.
+   * Find the nearest valid blockade on the Police agent's
+   * current Road.
    */
-  private void publishTarget() {
-    int agentKey = this.agentInfo.getID().getValue();
-    if (this.target == null) {
-      TARGETS.remove(agentKey);
-    } else {
-      TARGETS.put(agentKey, this.target);
-    }
-  }
+  private ClearCandidate findCurrentRoadCandidate() {
 
-  /**
-   * Applies the clearing rule for the road the agent is standing on.
-   *
-   * Returns null in every case where cutting is impossible or pointless, which
-   * hands the timestep to the move module.
-   *
-   * @return the clear command, or null when there is nothing to cut
-   */
-  private ActionClear decideClear() {
-
-    if (this.escape.isStuck()) {
-      return null;    // stand aside so the move module can force an escape
-    }
-
-    if (!(this.agentInfo.me() instanceof PoliceForce)) {
+    EntityID positionID = this.agentInfo.getPosition();
+    if (positionID == null) {
       return null;
     }
-    
-    PoliceForce police = (PoliceForce) this.agentInfo.me();
-
-    StandardEntity here = this.worldInfo.getEntity(police.getPosition());
-    if (!(here instanceof Road)) {
-      // Blockades only live on roads.
+    StandardEntity positionEntity = this.worldInfo.getEntity(positionID);
+    if (!(positionEntity instanceof Road)) {
       return null;
     }
 
-    double agentX = police.getX();
-    double agentY = police.getY();
+    Road road = (Road) positionEntity;
 
-    Blockade nearest = null;
-    double aimX = 0;
-    double aimY = 0;
-    double nearestDistance = Double.MAX_VALUE;
+    if (!road.isBlockadesDefined() || road.getBlockades().isEmpty()) {
+      return null;
+    }
 
-    for (Blockade blockade : this.worldInfo.getBlockades((Road) here)) {
-      double[] aim = aimPoint(blockade, agentX, agentY);
-      if (aim == null) {
+    ClearCandidate best = null;
+
+    for (EntityID blockadeID : road.getBlockades()) {
+      StandardEntity entity = this.worldInfo.getEntity(blockadeID);
+      if (!(entity instanceof Blockade)) {
         continue;
       }
-      if (aim[2] < nearestDistance) {
-        nearestDistance = aim[2];
-        aimX = aim[0];
-        aimY = aim[1];
-        nearest = blockade;
+      Blockade blockade = (Blockade) entity;
+      ClearCandidate candidate = this.createCandidate(blockade);
+
+      if (candidate == null) {
+        continue;
+      }
+
+      if (best == null || this.isBetterCandidate(candidate, best)) {
+        best = candidate;
       }
     }
-
-    if (nearest == null) {
-      // Road is open, or we cannot see where the rubble is yet.
-      return null;
-    }
-
-    if (nearestDistance > this.clearDistance) {
-      // Too far to cut. Null lets URFPoliceExtActionMove walk us closer.
-      return null;
-    }
-
-    double dx = aimX - agentX;
-    double dy = aimY - agentY;
-    double length = Math.hypot(dx, dy);
-
-    if (length < 1.0) {
-      // Standing exactly on it. Dividing by this would produce NaN and the
-      // kernel would drop the command, so just pick a direction.
-      dx = 1.0;
-      dy = 0.0;
-      length = 1.0;
-    }
-
-    int clearX = (int) (agentX + dx / length * this.clearDistance);
-    int clearY = (int) (agentY + dy / length * this.clearDistance);
-
-    // ActionClear(x, y, blockade) maps to AKClearArea. The one argument
-    // ActionClear(blockade) is the legacy AKClear and most servers reject it.
-    return new ActionClear(clearX, clearY, nearest);
+    return best;
   }
 
   /**
-   * Finds the point on a blockade that the agent should aim at: the closest
-   * polygon vertex when the shape is known, otherwise the reported centre.
+   * Build geometric information for one blockade.
    *
-   * Package visible so URFPoliceExtActionMove uses the identical calculation.
-   * If the two modules disagreed on where a blockade is, one could decide it
-   * is in reach while the other decides it is not, and the agent would
-   * oscillate between clearing and stepping.
-   *
-   * @param blockade the blockade to aim at, may be null
-   * @param agentX the agent's x coordinate in millimetres
-   * @param agentY the agent's y coordinate in millimetres
-   *
-   * @return an array of {x, y, distance}, or null when the blockade's position
-   *   is completely unknown
+   * Distance is measured from the Police location to the
+   * nearest point on the blockade polygon.
    */
-  static double[] aimPoint(Blockade blockade, double agentX, double agentY) {
-    if (blockade == null) {
-      return null;
-    }
+  private ClearCandidate createCandidate(Blockade blockade) {
 
+    double agentX = this.agentInfo.getX();
+    double agentY = this.agentInfo.getY();
+
+    /*
+     * Preferred geometry:
+     * blockade polygon.
+     */
     if (blockade.isApexesDefined()) {
       int[] apexes = blockade.getApexes();
       if (apexes != null && apexes.length >= 6) {
-        double bestX = 0;
-        double bestY = 0;
-        double best = Double.MAX_VALUE;
-        for (int i = 0; i + 1 < apexes.length; i += 2) {
-          double distance =
-              Math.hypot(apexes[i] - agentX, apexes[i + 1] - agentY);
-          if (distance < best) {
-            best = distance;
-            bestX = apexes[i];
-            bestY = apexes[i + 1];
+        /*
+         * If Police is inside the blockade polygon,
+         * consider the distance zero.
+         */
+        if (blockade.getShape().contains(agentX, agentY)) {
+          double pointX;
+          double pointY;
+
+          if (blockade.isXDefined() && blockade.isYDefined()) {
+            pointX = blockade.getX();
+            pointY = blockade.getY();
+          } 
+          else {
+            pointX = apexes[0];
+            pointY = apexes[1];
+          }
+          return new ClearCandidate(blockade, 0.0, pointX, pointY);
+        }
+
+        double bestDistance = Double.MAX_VALUE;
+        double bestX = 0.0;
+        double bestY = 0.0;
+        int pointCount = apexes.length / 2;
+        for (int i = 0; i < pointCount; i++) {
+          int next = (i + 1) % pointCount;
+          double x1 = apexes[i * 2];
+          double y1 = apexes[i * 2 + 1];
+          double x2 = apexes[next * 2];
+          double y2 = apexes[next * 2 + 1];
+          ClosestPoint point = this.closestPointOnSegment(agentX, agentY, x1, y1, x2, y2);
+          if (point.distance < bestDistance) {
+            bestDistance = point.distance;
+            bestX = point.x;
+            bestY = point.y;
           }
         }
-        return new double[] { bestX, bestY, best };
+
+        if (bestDistance < Double.MAX_VALUE) {
+          return new ClearCandidate(blockade, bestDistance, bestX, bestY);
+        }
       }
     }
 
+    /*
+     * Fallback:
+     * use the Blockade X/Y location when polygon data is
+     * not currently available.
+     */
     if (blockade.isXDefined() && blockade.isYDefined()) {
-      double x = blockade.getX();
-      double y = blockade.getY();
-      return new double[] { x, y, Math.hypot(x - agentX, y - agentY) };
+      double dx = blockade.getX() - agentX;
+      double dy = blockade.getY() - agentY;
+      return new ClearCandidate(blockade, Math.hypot(dx, dy), blockade.getX(), blockade.getY());
+    }
+    return null;
+  }
+
+  /**
+   * Determine whether candidate A should be preferred over B.
+   *
+   * Primary ordering:
+   * nearest physical blockade.
+   *
+   * Tie-break:
+   * smaller EntityID for deterministic behaviour.
+   */
+  private boolean isBetterCandidate(ClearCandidate candidate, ClearCandidate currentBest) {
+    if (candidate.distance < currentBest.distance) {
+      return true;
+    }
+    if (Math.abs(candidate.distance - currentBest.distance) > 0.0001) {
+      return false;
+    }
+    return candidate.blockade.getID().getValue() < currentBest.blockade.getID().getValue();
+  }
+
+  /**
+   * Compare the currently observed blockade repair cost with
+   * the previous clear attempt.
+   *
+   * A decreasing repair cost means clearing is progressing.
+   *
+   * An unchanged or increased repair cost counts as stagnant.
+   */
+  private void updateClearProgress(Blockade blockade) {
+    EntityID blockadeID = blockade.getID();
+    int currentRepairCost = blockade.isRepairCostDefined() ? blockade.getRepairCost() : -1;
+
+    if (this.previousClearBlockade != null && this.previousClearBlockade.equals(blockadeID) && this.previousRepairCost >= 0 && currentRepairCost >= 0) {
+      if (currentRepairCost < this.previousRepairCost) {
+        /*
+         * The blockade is being repaired.
+         */
+        this.stagnantClearCount = 0;
+      } 
+      else {
+        /*
+         * Same blockade and no measurable progress.
+         */
+        this.stagnantClearCount++;
+      }
+    } 
+    else {
+      /*
+       * New blockade or unavailable repair-cost history.
+       */
+      this.stagnantClearCount = 0;
+    }
+    this.previousClearBlockade = blockadeID;
+    this.previousRepairCost = currentRepairCost;
+  }
+
+  /**
+   * Deterministic recovery.
+   *
+   * Instead of issuing MOVE from the CLEAR module, change the
+   * clear mode and clear direction through the nearest
+   * blockade boundary.
+   */
+  private ActionClear createRecoveryClear(ClearCandidate candidate) {
+    double agentX = this.agentInfo.getX();
+    double agentY = this.agentInfo.getY();
+    double dx = candidate.pointX - agentX;
+    double dy = candidate.pointY - agentY;
+    double vectorLength = Math.hypot(dx, dy);
+
+    /*
+     * If there is no meaningful direction vector,
+     * safely fall back to target-based clearing.
+     */
+    if (vectorLength < MIN_VECTOR_LENGTH) {
+      return new ActionClear(candidate.blockade);
     }
 
-    return null;
+    /*
+     * Point slightly beyond the nearest blockade boundary,
+     * but never beyond the scenario clear range.
+     */
+    double desiredDistance = Math.min(Math.max(0.0, this.clearDistance - 100.0), vectorLength + RECOVERY_EXTENSION);
+    if (desiredDistance < MIN_VECTOR_LENGTH) {
+      return new ActionClear(candidate.blockade);
+    }
+
+    double scale = desiredDistance / vectorLength;
+    int destinationX = (int) Math.round(agentX + dx * scale);
+    int destinationY = (int) Math.round(agentY + dy * scale);
+
+    /*
+     * Still an ActionClear.
+     *
+     * PI-1 deliberately never creates ActionMove.
+     */
+    return new ActionClear(destinationX, destinationY, candidate.blockade);
+  }
+
+  /**
+   * Clear previous attempt state when control is handed to
+   * another action module.
+   */
+  private void resetPreviousClearAttempt() {
+    this.previousClearBlockade = null;
+    this.previousRepairCost = -1;
+    this.stagnantClearCount = 0;
+  }
+
+  /**
+   * Compute the closest point on line segment AB to point P.
+   */
+  private ClosestPoint closestPointOnSegment(double px, double py, double ax, double ay, double bx, double by) {
+    double abX = bx - ax;
+    double abY = by - ay;
+    double lengthSquared = abX * abX + abY * abY;
+    if (lengthSquared <= 0.0) {
+      double distance = Math.hypot(px - ax, py - ay);
+      return new ClosestPoint(ax, ay, distance);
+    }
+    double projection = ((px - ax) * abX + (py - ay) * abY) / lengthSquared;
+    projection = Math.max(0.0, Math.min(1.0, projection));
+    double closestX = ax + projection * abX;
+    double closestY = ay + projection * abY;
+    double distance = Math.hypot(px - closestX, py - closestY);
+    return new ClosestPoint(closestX, closestY, distance);
+  }
+
+  /**
+   * Immutable information about one possible blockade.
+   */
+  private static final class ClearCandidate {
+    private final Blockade blockade;
+    private final double distance;
+    private final double pointX;
+    private final double pointY;
+    private ClearCandidate(Blockade blockade, double distance, double pointX, double pointY) {
+      this.blockade = blockade;
+      this.distance = distance;
+      this.pointX = pointX;
+      this.pointY = pointY;
+    }
+  }
+
+  /**
+   * Immutable closest-point calculation result.
+   */
+  private static final class ClosestPoint {
+    private final double x;
+    private final double y;
+    private final double distance;
+    private ClosestPoint(double x, double y, double distance) {
+      this.x = x;
+      this.y = y;
+      this.distance = distance;
+    }
   }
 }
