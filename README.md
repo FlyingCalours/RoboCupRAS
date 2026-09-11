@@ -43,6 +43,15 @@ Note : To avoid inherit *.git* that might cause trouble. We need a clean structu
 3. In tab 2 : run `RoboCupRAS/launch.sh -all`
 4. Press `Run` in the UI pop out
 
+### Execute codes in different map
+
+Execute the following commands in `rcrs-server/scripts` for montreal ,paris and berlin.
+```
+./start.sh -m ../maps/montreal/map -c ../maps/montreal/config
+./start.sh -m ../maps/paris/map -c ../maps/paris/config
+./start.sh -m ../maps/berlin/map -c ../maps/berlin/config
+```
+
 ## Documentation
 
 RCRS and adf-core doesn't provide documentation. Hence in order to understand the codes, we wrote a documentation for it.
