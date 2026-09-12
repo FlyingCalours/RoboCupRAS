@@ -7,64 +7,65 @@ import adf.core.agent.info.WorldInfo;
 import adf.core.agent.module.ModuleManager;
 import adf.core.component.module.complex.RoadDetector;
 import rescuecore2.worldmodel.EntityID;
-import sample_team.module.complex.SampleRoadDetector;
+import sample_team.module.complex.police.improvement.URFRoadDetector;
 
 /**
- * Observation-only wrapper around SampleRoadDetector.
+ * Observation wrapper around URFRoadDetector.
  *
- * IMPORTANT:
- * This class is retained only for the observation baseline.
+ * Observation responsibilities:
+ * - record Area position and physical X/Y for this timestep
+ * - record the road target selected by the URF scoring logic
+ * - measure target-selection calculation time
  *
- * Competition Police development after PO-9 will use
- * independent URF decision modules and will not inherit
- * SampleRoadDetector.
+ * This class is the single owner of physical position observation.
+ * CLEAR and MOVE observers must not record position again.
+ *
+ * Police behaviour is unchanged. Every decision still comes from
+ * URFRoadDetector.
  */
-public class URFObservedRoadDetector
-    extends SampleRoadDetector {
+public class URFObservedRoadDetector extends URFRoadDetector {
 
   private final URFPoliceMetrics metrics;
 
-  public URFObservedRoadDetector(
-      AgentInfo agentInfo,
-      WorldInfo worldInfo,
-      ScenarioInfo scenarioInfo,
-      ModuleManager moduleManager,
-      DevelopData developData) {
+  private long lastCalcNanos;
 
-    super(
-        agentInfo,
-        worldInfo,
-        scenarioInfo,
-        moduleManager,
-        developData);
-
-    this.metrics =
-        URFPoliceMetrics.forAgent(
-            agentInfo.getID());
+  /**
+   * @param agentInfo agent information supplied by the ADF
+   * @param worldInfo world information supplied by the ADF
+   * @param scenarioInfo scenario constants supplied by the ADF
+   * @param moduleManager module manager used for sub module selection
+   * @param developData development configuration supplied by the ADF
+   */
+  public URFObservedRoadDetector(AgentInfo agentInfo, WorldInfo worldInfo, ScenarioInfo scenarioInfo,
+                                 ModuleManager moduleManager, DevelopData developData) {
+    super(agentInfo, worldInfo, scenarioInfo, moduleManager, developData);
+    this.metrics = URFPoliceMetrics.forAgent(agentInfo.getID());
+    this.lastCalcNanos = 0L;
   }
 
+  /**
+   * @return this module
+   */
   @Override
   public RoadDetector calc() {
 
+    long startNanos = System.nanoTime();
+
     /*
-     * Preserve the complete SampleRoadDetector
-     * target-selection behaviour.
+     * Preserve the complete URFRoadDetector target-selection behaviour.
      */
     super.calc();
 
-    EntityID position =
-        this.agentInfo.getPosition();
+    this.lastCalcNanos = System.nanoTime() - startNanos;
 
-    EntityID target =
-        super.getTarget();
+    EntityID position = this.agentInfo.getPosition();
+    EntityID target = super.getTarget();
 
     /*
-     * PO-8.3 FIX:
-     *
      * Store both Area position and physical X/Y.
      *
-     * Without X/Y the previous implementation could
-     * not calculate physical displacement correctly.
+     * Without X/Y the stuck detector cannot calculate physical
+     * displacement correctly.
      */
     this.metrics.recordPosition(
         this.agentInfo.getTime(),
@@ -72,16 +73,23 @@ public class URFObservedRoadDetector
         this.agentInfo.getX(),
         this.agentInfo.getY());
 
-    this.metrics.recordTarget(
-        target);
+    this.metrics.recordTarget(target);
 
     /*
      * Do not print here.
      *
-     * CLEAR/MOVE observers print and export after
-     * the final autonomous action is known.
+     * CLEAR/MOVE observers print and export after the final autonomous
+     * action is known.
      */
+    // Can Add Logging of system.out.println here
 
     return this;
+  }
+
+  /**
+   * @return nanoseconds spent inside the most recent target selection
+   */
+  public final long getLastCalcNanos() {
+    return this.lastCalcNanos;
   }
 }

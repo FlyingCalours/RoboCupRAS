@@ -43,7 +43,7 @@ import sample_team.module.complex.police.observation.URFPoliceStuckDetector;
  *
  * Those responsibilities belong to later independent URF modules.
  */
-public final class URFPoliceExtActionClear extends ExtAction {
+public class URFPoliceExtActionClear extends ExtAction {
   /**
    * Number of consecutive clear attempts with no observed
    * reduction in blockade repair cost before changing the
