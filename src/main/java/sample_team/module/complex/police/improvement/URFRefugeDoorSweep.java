@@ -42,7 +42,7 @@ public final class URFRefugeDoorSweep {
       new ConcurrentHashMap<>();
 
   /** Cycles before a confirmed or abandoned door becomes pending again. */
-  private static final int RECHECK_INTERVAL = 50;
+  private static final int RECHECK_INTERVAL = 200;
 
   /** Cycles spent targeting one door before giving up on it. */
   private static final int ATTEMPT_BUDGET = 30;

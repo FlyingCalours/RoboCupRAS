@@ -7,6 +7,7 @@ import adf.core.agent.info.WorldInfo;
 import adf.core.agent.module.ModuleManager;
 import adf.core.component.module.algorithm.PathPlanning;
 import adf.core.component.module.complex.RoadDetector;
+import sample_team.module.complex.police.improvement.URFStuckAgentEscort;
 import sample_team.module.complex.police.improvement.URFRefugeDoorSweep;
 
 import java.util.ArrayList;
@@ -24,6 +25,10 @@ import rescuecore2.standard.entities.Road;
 import rescuecore2.standard.entities.StandardEntity;
 import rescuecore2.standard.entities.StandardEntityURN;
 import rescuecore2.worldmodel.EntityID;
+
+import adf.core.agent.communication.MessageManager;
+import adf.core.agent.communication.standard.bundle.information.MessageAmbulanceTeam;
+import java.util.TreeMap;
 
 /**
  * Independent URF Police road target selection module.
@@ -57,6 +62,9 @@ public class URFRoadDetector extends RoadDetector {
 
   /** Returned while the refuge door sweep is driving the target. */
   public static final String REASON_REFUGE_DOOR_SWEEP = "REFUGE_DOOR_SWEEP";
+
+  /** Returned while a stuck ambulance escort is driving the target. */
+  public static final String REASON_ESCORT_STUCK_AGENT = "ESCORT_STUCK_AGENT";
 
   /** Returned when no blocked road is currently known. */
   public static final String REASON_NO_CANDIDATE = "NO_BLOCKED_ROAD_KNOWN";
@@ -194,6 +202,8 @@ public class URFRoadDetector extends RoadDetector {
       return this;
     }
 
+
+
     EntityID door = URFRefugeDoorSweep
     .forAgent(this.agentInfo.getID())
     .nextDoor(this.agentInfo, this.worldInfo);
@@ -202,6 +212,16 @@ public class URFRoadDetector extends RoadDetector {
       this.applySelection(door, REASON_REFUGE_DOOR_SWEEP, 0.0);
       return this;
     }
+
+    EntityID rescue = URFStuckAgentEscort
+    .forAgent(this.agentInfo.getID())
+    .nextTarget(this.agentInfo, this.worldInfo);
+
+    if (rescue != null) {
+      this.applySelection(rescue, REASON_ESCORT_STUCK_AGENT, 0.0);
+      return this;
+    }
+
 
     if (this.refugeIDs.isEmpty()) {
       this.collectRefuges();
@@ -237,6 +257,26 @@ public class URFRoadDetector extends RoadDetector {
 
     return this;
   }
+
+
+  /**
+   * @param messageManager message manager supplied by the ADF
+   * @return this module
+   */
+  @Override
+  public RoadDetector updateInfo(MessageManager messageManager) {
+    super.updateInfo(messageManager);
+    if (this.getCountUpdateInfo() >= 2) {
+      return this;
+    }
+
+    URFStuckAgentEscort
+        .forAgent(this.agentInfo.getID())
+        .observe(this.agentInfo, messageManager);
+
+    return this;
+  }
+
 
   /**
    * @return the reason string produced by the most recent calc call
