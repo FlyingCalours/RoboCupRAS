@@ -8,10 +8,17 @@ import adf.core.agent.info.ScenarioInfo;
 import adf.core.agent.info.WorldInfo;
 import adf.core.agent.module.ModuleManager;
 import adf.core.component.extaction.ExtAction;
+
 import rescuecore2.standard.entities.Blockade;
 import rescuecore2.standard.entities.Road;
 import rescuecore2.standard.entities.StandardEntity;
 import rescuecore2.worldmodel.EntityID;
+import rescuecore2.standard.entities.Area;
+import rescuecore2.standard.entities.Edge;
+
+import java.util.ArrayList;
+import java.util.List;
+
 import sample_team.module.complex.police.observation.URFPoliceCsvExporter;
 import sample_team.module.complex.police.observation.URFPoliceMetrics;
 import sample_team.module.complex.police.observation.URFPoliceStuckDetector;
@@ -23,7 +30,7 @@ import sample_team.module.complex.police.observation.URFPoliceStuckDetector;
  *
  * 1. Do not inherit DefaultExtActionClear.
  * 2. Do not inherit Sample decision logic.
- * 3. Clear blockades on the Police agent's current Road.
+ * 3. Clear blockades within clear range of the Police agent.
  * 4. Never generate ActionMove.
  * 5. Return null when clearing is not appropriate so that
  *    DefaultTacticsPoliceForce can continue to ExtActionMove.
@@ -43,7 +50,7 @@ import sample_team.module.complex.police.observation.URFPoliceStuckDetector;
  *
  * Those responsibilities belong to later independent URF modules.
  */
-public final class URFPoliceExtActionClear extends ExtAction {
+public class URFPoliceExtActionClear extends ExtAction {
   /**
    * Number of consecutive clear attempts with no observed
    * reduction in blockade repair cost before changing the
@@ -148,7 +155,7 @@ public final class URFPoliceExtActionClear extends ExtAction {
     long startNanos = System.nanoTime();
     this.result = null;
     String decision = "NO_LOCAL_CLEAR";
-    ClearCandidate candidate = this.findCurrentRoadCandidate();
+    ClearCandidate candidate = this.findNearbyCandidate();
 
     if (candidate != null) {
       if (candidate.distance <= this.clearDistance) {
@@ -209,45 +216,83 @@ public final class URFPoliceExtActionClear extends ExtAction {
   }
 
   /**
-   * Find the nearest valid blockade on the Police agent's
-   * current Road.
+   * Find the nearest valid blockade in reach of the Police agent.
+   *
+   * The search covers the agent's current area and every neighbouring
+   * area. The kernel gates a clear command on physical distance, not on
+   * road membership, so a blockade just across a shared edge is a legal
+   * and often necessary target. Restricting the search to the current
+   * road left the agent unable to cut the blockade that was actually
+   * holding it, because MOVE reported the edge as passable and the
+   * traffic simulator then refused every step.
+   *
+   * Range is still enforced by the caller against clearDistance.
    */
-  private ClearCandidate findCurrentRoadCandidate() {
+  private ClearCandidate findNearbyCandidate() {
 
     EntityID positionID = this.agentInfo.getPosition();
     if (positionID == null) {
       return null;
     }
-    StandardEntity positionEntity = this.worldInfo.getEntity(positionID);
-    if (!(positionEntity instanceof Road)) {
-      return null;
-    }
-
-    Road road = (Road) positionEntity;
-
-    if (!road.isBlockadesDefined() || road.getBlockades().isEmpty()) {
-      return null;
-    }
 
     ClearCandidate best = null;
 
-    for (EntityID blockadeID : road.getBlockades()) {
-      StandardEntity entity = this.worldInfo.getEntity(blockadeID);
-      if (!(entity instanceof Blockade)) {
-        continue;
-      }
-      Blockade blockade = (Blockade) entity;
-      ClearCandidate candidate = this.createCandidate(blockade);
-
-      if (candidate == null) {
+    for (EntityID areaID : this.searchAreas(positionID)) {
+      StandardEntity areaEntity = this.worldInfo.getEntity(areaID);
+      if (!(areaEntity instanceof Road)) {
         continue;
       }
 
-      if (best == null || this.isBetterCandidate(candidate, best)) {
-        best = candidate;
+      Road road = (Road) areaEntity;
+      if (!road.isBlockadesDefined() || road.getBlockades().isEmpty()) {
+        continue;
+      }
+
+      for (EntityID blockadeID : road.getBlockades()) {
+        StandardEntity entity = this.worldInfo.getEntity(blockadeID);
+        if (!(entity instanceof Blockade)) {
+          continue;
+        }
+        Blockade blockade = (Blockade) entity;
+        ClearCandidate candidate = this.createCandidate(blockade);
+
+        if (candidate == null) {
+          continue;
+        }
+
+        if (best == null || this.isBetterCandidate(candidate, best)) {
+          best = candidate;
+        }
       }
     }
     return best;
+  }
+
+  /**
+   * @param positionID the agent's current area
+   * @return the current area followed by every neighbouring area
+   */
+  private List<EntityID> searchAreas(EntityID positionID) {
+    List<EntityID> areas = new ArrayList<>();
+    areas.add(positionID);
+
+    StandardEntity entity = this.worldInfo.getEntity(positionID);
+    if (!(entity instanceof Area)) {
+      return areas;
+    }
+
+    Area area = (Area) entity;
+    if (!area.isEdgesDefined()) {
+      return areas;
+    }
+
+    for (Edge edge : area.getEdges()) {
+      EntityID neighbour = edge.getNeighbour();
+      if (neighbour != null) {
+        areas.add(neighbour);
+      }
+    }
+    return areas;
   }
 
   /**
