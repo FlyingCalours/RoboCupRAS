@@ -1,0 +1,472 @@
+@startuml urf_police_class_diagram
+
+' ===========================================================
+' RoboCup Rescue Simulation - URF Police Force Agent
+'
+' Scope: URF classes and the eight extracted enums only.
+' ADF and rescuecore2 parent types (ExtAction, RoadDetector,
+' DefaultExtActionMove, Action, EntityID, ...) are referenced in
+' signatures but deliberately not drawn as boxes.
+'
+' Signatures shown are POST-refactor: the String constants have
+' already been replaced by the enums below.
+' ===========================================================
+
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam linetype ortho
+skinparam nodesep 55
+skinparam ranksep 70
+skinparam defaultFontName Helvetica
+skinparam class {
+  BackgroundColor White
+  BorderColor #2E3A59
+  ArrowColor #2E3A59
+  FontColor #2E3A59
+  BorderThickness 1
+}
+skinparam enum {
+  BackgroundColor White
+  BorderColor #2E3A59
+  FontColor #2E3A59
+}
+skinparam package {
+  BackgroundColor #FAFAFC
+  BorderColor #B8BFD0
+  FontColor #2E3A59
+}
+hide circle
+
+
+package "police.improvement" {
+
+  class URFRoadDetector {
+    -PathPlanning pathPlanning
+    -Map<EntityID, Integer> cooldownUntil
+    -Map<EntityID, Integer> abandonCount
+    -Map<EntityID, Integer> blockedAgentCount
+    -Map<EntityID, Integer> casualtyCount
+    -Set<EntityID> burningBuildings
+    -Set<EntityID> refugeIDs
+    -EntityID result
+    -double bestDistanceToTarget
+    -int bestRepairCostOnTarget
+    -int noProgressCount
+    -URFRoadTargetReason lastReason
+    -double lastScore
+    -int lastCandidateCount
+    -boolean lastTargetChanged
+    --
+    +getTarget() : EntityID
+    +calc() : RoadDetector
+    +updateInfo(messageManager) : RoadDetector
+    +getLastReason() : URFRoadTargetReason
+    +getLastScore() : double
+    +getLastCandidateCount() : int
+    +isLastTargetChanged() : boolean
+    +getNoProgressCount() : int
+    +getCooldownCount() : int
+    +getAbandonCount(roadID) : int
+    -applySelection(roadID, reason, score) : void
+    -reviewCurrentTarget(positionID) : void
+    -rankBlockedRoads(positionID) : List<ScoredRoad>
+    -accessValue(road, positionID) : double
+    -selectReachable(positionID, ranked) : ScoredRoad
+    -refreshWorldSnapshot() : void
+    -needsHelp(human) : boolean
+    -totalRepairCost(road) : int
+    -collectRefuges() : void
+  }
+
+  class URFPoliceExtActionClear {
+    -int clearDistance
+    -URFPoliceMetrics metrics
+    -URFPoliceStuckDetector stuckDetector
+    -EntityID target
+    -EntityID previousClearBlockade
+    -int previousRepairCost
+    -int stagnantClearCount
+    -int recoveryClearCount
+    --
+    +setTarget(target) : ExtAction
+    +calc() : ExtAction
+    -findNearbyCandidate() : ClearCandidate
+    -searchAreas(positionID) : List<EntityID>
+    -createCandidate(blockade) : ClearCandidate
+    -isBetterCandidate(candidate, currentBest) : boolean
+    -updateClearProgress(blockade) : void
+    -createRecoveryClear(candidate) : ActionClear
+    -resetPreviousClearAttempt() : void
+    -closestPointOnSegment(px, py, ax, ay, bx, by) : ClosestPoint
+  }
+
+  class URFPoliceExtActionMove {
+    -int clearDistance
+    -RoadDetector roadDetector
+    -URFPoliceMetrics metrics
+    -URFPoliceStuckDetector stuckDetector
+    -EntityID roadTarget
+    -EntityID searchTarget
+    -EntityID requestedTarget
+    -URFMoveTargetSource targetSource
+    -boolean standingOnTarget
+    -int neighbourIndex
+    -int bearingIndex
+    --
+    +setTarget(target) : ExtAction
+    +calc() : ExtAction
+    +getRoadTarget() : EntityID
+    +getSearchTarget() : EntityID
+    +getRequestedTarget() : EntityID
+    +getTargetSource() : URFMoveTargetSource
+    +isStandingOnTarget() : boolean
+    -readRoadTarget() : EntityID
+    -pushThrough() : Action
+    -stepTo(position, options) : Action
+    -passableNeighbours(position) : List<EntityID>
+    -bearingClear() : Action
+    -nextBearing() : double
+    -anyNearbyBlockade() : Blockade
+    -allNeighbours(position) : List<EntityID>
+  }
+
+  class URFStuckAgentEscort {
+    -Map<EntityID, Sighting> sightings
+    -Map<EntityID, Integer> suppressUntil
+    -EntityID escortAmbulance
+    -EntityID escortPosition
+    -EntityID escortRoad
+    -int escortStartTime
+    -int lastTime
+    -int escortStartedCount
+    -int escortFreedCount
+    -int escortExpiredCount
+    --
+    +{static} forAgent(agentID) : URFStuckAgentEscort
+    +observe(agentInfo, messageManager) : void
+    +nextTarget(agentInfo, worldInfo) : EntityID
+    +getEscortAmbulance() : EntityID
+    +getEscortRoad() : EntityID
+    +getSightingCount() : int
+    +getEscortStartedCount() : int
+    +getEscortFreedCount() : int
+    +getEscortExpiredCount() : int
+    +getStalledCount() : int
+    +toLogFields() : String
+    -chooseEscort(agentInfo, worldInfo, now) : EntityID
+    -isStalled(sighting, now) : boolean
+    -releaseEscort(now) : void
+    -isSuppressed(ambulanceID, now) : boolean
+    -discardStaleSightings(now) : void
+    -resolveRoad(areaID, worldInfo) : EntityID
+  }
+
+  class URFRefugeDoorSweep {
+    -List<EntityID> doors
+    -Map<EntityID, Integer> suppressUntil
+    -boolean doorsCollected
+    -EntityID currentDoor
+    -int attemptStartTime
+    -int confirmedCount
+    -int abandonedCount
+    -int lastTime
+    --
+    +{static} forAgent(agentID) : URFRefugeDoorSweep
+    +nextDoor(agentInfo, worldInfo) : EntityID
+    +getDoorCount() : int
+    +getConfirmedCount() : int
+    +getAbandonedCount() : int
+    +getCurrentDoor() : EntityID
+    +getPendingCount() : int
+    +toLogFields() : String
+    -nearestPendingDoor(position, worldInfo, now) : EntityID
+    -isSuppressed(door, now) : boolean
+    -isObservedClear(roadID, worldInfo) : boolean
+    -collectDoors(worldInfo) : void
+  }
+
+  enum URFRoadTargetReason {
+    NO_POSITION
+    REFUGE_DOOR_SWEEP
+    ESCORT_STUCK_AGENT
+    NO_BLOCKED_ROAD_KNOWN
+    SCORED_REACHABLE
+    SCORED_UNREACHABLE_FALLBACK
+  }
+
+  enum URFClearDecision {
+    CLEAR_NEAREST_BLOCKADE
+    RECOVERY_DIRECTIONAL_CLEAR
+    BLOCKADE_OUTSIDE_CLEAR_RANGE_HANDOFF
+    ROAD_CLEAR_OR_NO_LOCAL_BLOCKADE
+    NO_LOCAL_CLEAR
+  }
+
+  enum URFMoveTargetSource {
+    ROAD_TARGET
+    SEARCH_TARGET
+    PUSH_THROUGH
+    NO_TARGET
+  }
+}
+
+
+package "police.observation" {
+
+  class URFPoliceMetrics {
+    -int agentId
+    -int time
+    -EntityID currentPosition
+    -EntityID previousPosition
+    -EntityID selectedTarget
+    -EntityID lastClearTarget
+    -double currentX
+    -double currentY
+    -double previousX
+    -double previousY
+    -double lastStepDistance
+    -double totalObservedDisplacement
+    -URFActionType lastActionType
+    -URFActionSource lastActionSource
+    -String otherActionLabel
+    -List<EntityID> lastPath
+    -int lastPathLength
+    -boolean lastMoveUsesPosition
+    -int lastMoveX
+    -int lastMoveY
+    -boolean lastClearUsesBlockadeTarget
+    -int lastClearX
+    -int lastClearY
+    -int moveCount
+    -int clearCount
+    -int restCount
+    -int otherActionCount
+    -int targetChangeCount
+    -int samePositionStreak
+    -int maxSamePositionStreak
+    -boolean possibleStuck
+    -EntityID lastClearRequestTarget
+    -EntityID lastMoveRequestTarget
+    -int clearModuleCallCount
+    -int moveModuleCallCount
+    -int fallbackRestCount
+    -int lastFinalActionTime
+    --
+    +{static} forAgent(agentId) : URFPoliceMetrics
+    +{static} resetAgent(agentId) : void
+    +recordPosition(simulationTime, position, x, y) : void
+    +recordTarget(target) : void
+    +recordAction(action) : void
+    +recordClearModuleResult(simulationTime, requestedTarget, action, calcNanos) : void
+    +recordMoveModuleResult(simulationTime, requestedTarget, action, calcNanos) : void
+    +recordDecisionTime(milliseconds) : void
+    +setPossibleStuck(possibleStuck) : void
+    +getLastActionType() : URFActionType
+    +getLastActionSource() : URFActionSource
+    +getLastActionLabel() : String
+    +getCurrentPosition() : EntityID
+    +getPreviousPosition() : EntityID
+    +getSelectedTarget() : EntityID
+    +getLastStepDistance() : double
+    +getLastPathLength() : int
+    +getLastClearRequestTarget() : EntityID
+    +getLastMoveRequestTarget() : EntityID
+    +toLogLine() : String
+    -recordFinalActionInternal(simulationTime, action, source) : void
+    -recordActionInternal(action, source) : void
+    -updateLastActionSnapshot(action, source) : void
+    -resetLastActionDetails() : void
+  }
+
+  class URFPoliceStuckDetector {
+    -int agentId
+    -int lastEvaluationTime
+    -URFActionType previousActionType
+    -URFActionSource previousActionSource
+    -EntityID previousActionTarget
+    -int previousPathLength
+    -EntityID lastFailedMoveTarget
+    -int consecutiveFailedMoves
+    -int consecutiveSameTargetFailedMoves
+    -int totalFailedMoveOutcomes
+    -int possibleStuckEvents
+    -int confirmedStuckEvents
+    -boolean possibleStuckActive
+    -boolean confirmedStuckActive
+    -URFStuckStatus status
+    -URFStuckReason reason
+    -URFMoveOutcome lastMoveOutcome
+    -String otherActionLabel
+    --
+    +{static} forAgent(agentId) : URFPoliceStuckDetector
+    +{static} resetAgent(agentId) : void
+    +evaluate(metrics) : void
+    +toLogFields() : String
+    +getAgentId() : int
+    +getStatus() : URFStuckStatus
+    +getConsecutiveFailedMoves() : int
+    +getConfirmedStuckEvents() : int
+    -evaluatePreviousActionOutcome(metrics) : void
+    -classifyCurrentAction(metrics) : void
+    -snapshotCurrentAction(metrics) : void
+    -{static} resolveCurrentActionTarget(metrics) : EntityID
+    -resetFailedMoveEvidence() : void
+    -reasonLabel() : String
+  }
+
+  class URFPoliceCsvExporter {
+    -{static} String SCHEMA_VERSION
+    -{static} String RUN_ID
+    -{static} Map<Integer, Integer> LAST_EXPORTED_TIME
+    -{static} String HEADER
+    --
+    +{static} export(metrics, stuckDetector) : void
+    -{static} idValue(id) : String
+    -{static} csv(value) : String
+    -{static} nanosToMicros(nanos) : double
+  }
+
+  class URFObservedRoadDetector {
+    -URFPoliceMetrics metrics
+    -long lastCalcNanos
+    --
+    +calc() : RoadDetector
+    +getLastCalcNanos() : long
+  }
+
+  class URFObservedExtActionClear {
+    -EntityID requestedTarget
+    -long observedCycles
+    -long observedClearCount
+    -long observedHandoffCount
+    -long observedTotalNanos
+    -long lastCycleNanos
+    --
+    +setTarget(target) : ExtAction
+    +calc() : ExtAction
+    +getLastCycleNanos() : long
+    +getObservedCycles() : long
+    +getObservedClearCount() : long
+    +getObservedHandoffCount() : long
+    +getAverageCycleNanos() : double
+    -toObservationLine() : String
+  }
+
+  class URFObservedExtActionMove {
+    -long observedCycles
+    -long observedMoveCount
+    -long observedClearCount
+    -long observedNullCount
+    -long observedSelfLoopCount
+    -long observedPushThroughCount
+    -long observedRoadTargetCount
+    -long observedSearchTargetCount
+    -long observedTotalNanos
+    -long lastCycleNanos
+    --
+    +calc() : ExtAction
+    +getLastCycleNanos() : long
+    +getObservedCycles() : long
+    +getObservedMoveCount() : long
+    +getObservedClearCount() : long
+    +getObservedNullCount() : long
+    +getObservedSelfLoopCount() : long
+    +getObservedRoadTargetCount() : long
+    +getObservedSearchTargetCount() : long
+    +getAverageCycleNanos() : double
+    -isSelfLoop(action) : boolean
+    -toObservationLine() : String
+  }
+
+  enum URFActionType {
+    NONE
+    MOVE
+    CLEAR
+    REST
+    OTHER
+  }
+
+  enum URFActionSource {
+    NONE
+    UNSPECIFIED
+    UNKNOWN
+    CLEAR_MODULE
+    MOVE_MODULE
+    TACTICS_FALLBACK_REST
+  }
+
+  enum URFStuckStatus {
+    INITIALIZING
+    POSSIBLE_STUCK
+    CONFIRMED_STUCK
+    CLEARING
+    RESTING
+    NO_MOVE_RESULT
+    MOVE_PENDING
+    MOVE_WITHOUT_PATH
+    NO_ACTION
+    OTHER_ACTION
+  }
+
+  enum URFStuckReason {
+    WAITING_FOR_FIRST_ACTION_OUTCOME
+    REPEATED_MOVE_NO_PROGRESS
+    REPEATED_MOVE_NO_PROGRESS_SAME_TARGET
+    CLEAR_ACTION_ACTIVE
+    REST_ACTION_ACTIVE
+    MOVE_MODULE_RETURNED_NULL
+    MOVE_ACTION_HAS_EMPTY_PATH
+    WAITING_FOR_NEXT_TIMESTEP_PROGRESS
+    NO_FINAL_ACTION_RECORDED
+    OTHER_ACTION_TYPE
+  }
+
+  enum URFMoveOutcome {
+    NOT_EVALUATED
+    NOT_MOVE
+    NO_PATH
+    PROGRESS
+    NO_PROGRESS
+  }
+}
+
+
+' ----- inheritance: observation wrappers extend the real modules -----
+URFObservedRoadDetector --|> URFRoadDetector
+URFObservedExtActionClear --|> URFPoliceExtActionClear
+URFObservedExtActionMove --|> URFPoliceExtActionMove
+
+' ----- target selection collaborators -----
+URFRoadDetector --> URFRefugeDoorSweep
+URFRoadDetector --> URFStuckAgentEscort
+
+' ----- action modules hold the observation singletons -----
+URFPoliceExtActionClear --> URFPoliceMetrics
+URFPoliceExtActionClear --> URFPoliceStuckDetector
+URFPoliceExtActionMove --> URFPoliceMetrics
+URFPoliceExtActionMove --> URFPoliceStuckDetector
+URFPoliceExtActionMove --> URFRoadDetector
+URFObservedRoadDetector --> URFPoliceMetrics
+
+' ----- export pipeline -----
+URFPoliceExtActionClear ..> URFPoliceCsvExporter
+URFPoliceExtActionMove ..> URFPoliceCsvExporter
+URFPoliceStuckDetector ..> URFPoliceMetrics
+URFPoliceCsvExporter ..> URFPoliceMetrics
+URFPoliceCsvExporter ..> URFPoliceStuckDetector
+
+' ----- enum ownership -----
+URFRoadDetector --> URFRoadTargetReason
+URFPoliceExtActionClear --> URFClearDecision
+URFPoliceExtActionMove --> URFMoveTargetSource
+URFObservedExtActionMove --> URFMoveTargetSource
+
+URFPoliceMetrics --> URFActionType
+URFPoliceMetrics --> URFActionSource
+URFPoliceStuckDetector --> URFActionType
+URFPoliceStuckDetector --> URFActionSource
+URFPoliceStuckDetector --> URFStuckStatus
+URFPoliceStuckDetector --> URFStuckReason
+URFPoliceStuckDetector --> URFMoveOutcome
+
+@enduml
