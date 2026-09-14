@@ -3,8 +3,6 @@ extra assignment from Dr Babrdel Bonab, Mohammad. Implements AI, Multi-Agent Sys
 
 ## Folder Structure
 
-Note : To avoid inherit *.git* that might cause trouble. We need a clean structure
-
 - Special Characters : ├── │ └──
 
 ```
@@ -23,33 +21,62 @@ Note : To avoid inherit *.git* that might cause trouble. We need a clean structu
     ├── LICENSE
     ├── api_ref/
     ├── src/
-    │   └── main/java/sample_team/module/complex
+    │   ├── main/java/sample_team/
+    │   └── main/java/urf/
     │
     ├── config/
     ├── logs/
     ├── docs/
-    ├── learns
+    ├── learns/
     ├── gradle
     └── precomp_data
 ```
 
-**Reminder :**
-    - Don't upload external_deps, to avoid inherit *.git*
+## Build and Run
 
-## Execution
-
-1. Open 2 tab
-2. In tab 1 : run `rcrs-server/scripts/start.sh`
-3. In tab 2 : run `RoboCupRAS/launch.sh -all`
-4. Press `Run` in the UI pop out
-
-### Execute codes in different map
-
-Execute the following commands in `rcrs-server/scripts` for montreal ,paris and berlin.
+Clone this 2 repo first :
+```bash
+# Clone urls
+git clone https://github.com/roborescue/rcrs-server.git
+git clone https://github.com/roborescue/adf-core-java.git
 ```
-./start.sh -m ../maps/montreal/map -c ../maps/montreal/config
-./start.sh -m ../maps/paris/map -c ../maps/paris/config
-./start.sh -m ../maps/berlin/map -c ../maps/berlin/config
+
+Optional to clone , you can unzip the zip file too :
+```bash
+git clone https://github.com/FlyingCalours/RoboCupRAS.git
+```
+
+Compile server :
+```bash
+cd rcrs-server && ./gradlew completeBuild
+```
+
+Compile adf-core :
+```bash
+cd ..
+
+# Compile ADF core
+cd adf-core-java && ./gradlew clean && ./gradlew build
+```
+
+Run the server in tab 1:
+```bash
+cd ..
+
+# One Tab Run Server
+cd rcrs-server/scripts && ./start.sh
+```
+
+Run our scripts , auto compile :
+```bash
+cd RoboCupRAS && ./launch -all
+```
+
+Optional : Run Specific Map on Server
+```bash
+cd rcrs-server/scripts && ./start.sh -m ../maps/montreal/map -c ../maps/montreal/config
+cd rcrs-server/scripts && ./start.sh -m ../maps/paris/map -c ../maps/paris/config
+cd rcrs-server/scripts && ./start.sh -m ../maps/berlin/map -c ../maps/berlin/config
 ```
 
 ## Documentation
