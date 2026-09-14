@@ -1,0 +1,465 @@
+' ============================================================
+' URF Police - UML class diagram
+' Deliverable C, UECS1044 Group Assignment
+'
+' Render:  plantuml URF-class-diagram.puml
+'   or paste into https://www.plantuml.com/plantuml
+'
+' Two diagrams in this file:
+'   1. URF-class-detail    full members, for the report
+'   2. URF-class-overview  structure only, for slides and the video
+' ============================================================
+
+
+@startuml URF-class-detail
+
+skinparam monochrome true
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+skinparam defaultFontName Sans
+hide empty members
+
+title URF Police Force - class structure
+
+' ------------------------------------------------------------
+' ADF framework. Not modified by us.
+' ------------------------------------------------------------
+package "adf-core-java   <<not modified>>" {
+
+  abstract class AbstractModule {
+    #agentInfo : AgentInfo
+    #worldInfo : WorldInfo
+    #scenarioInfo : ScenarioInfo
+    #moduleManager : ModuleManager
+    #developData : DevelopData
+    +precompute(PrecomputeData) : AbstractModule
+    +resume(PrecomputeData) : AbstractModule
+    +preparate() : AbstractModule
+    +updateInfo(MessageManager) : AbstractModule
+    +registerModule(AbstractModule) : AbstractModule
+    +getCountUpdateInfo() : int
+  }
+
+  abstract class RoadDetector {
+    +{abstract} getTarget() : EntityID
+    +{abstract} calc() : RoadDetector
+  }
+
+  abstract class ExtAction {
+    #result : Action
+    +{abstract} setTarget(EntityID) : ExtAction
+    +{abstract} calc() : ExtAction
+    +getAction() : Action
+  }
+
+  class DefaultExtActionMove {
+    +setTarget(EntityID) : ExtAction
+    +calc() : ExtAction
+  }
+
+  abstract class PathPlanning {
+    +setFrom(EntityID) : PathPlanning
+    +setDestination(Collection<EntityID>) : PathPlanning
+    +calc() : PathPlanning
+    +getResult() : List<EntityID>
+  }
+
+  class ModuleManager {
+    +getModule(String, String) : AbstractModule
+  }
+
+  class MessageManager {
+    +getReceivedMessageList(Class) : List
+  }
+
+  class DevelopData {
+    +isDevelopMode() : boolean
+    +getInteger(String, int) : Integer
+    +getDouble(String, double) : Double
+  }
+
+  AbstractModule <|-- RoadDetector
+  AbstractModule <|-- ExtAction
+  AbstractModule <|-- PathPlanning
+  ExtAction <|-- DefaultExtActionMove
+}
+
+
+' ------------------------------------------------------------
+' Decision logic.
+' ------------------------------------------------------------
+package "sample_team.module.complex.police.improvement" {
+
+  class URFRoadDetector {
+    -pathPlanning : PathPlanning
+    -config : URFPoliceConfig
+    -cooldownUntil : Map<EntityID, Integer>
+    -abandonCount : Map<EntityID, Integer>
+    -blockedAgentCount : Map<EntityID, Integer>
+    -casualtyCount : Map<EntityID, Integer>
+    -burningBuildings : Set<EntityID>
+    -refugeIDs : Set<EntityID>
+    -result : EntityID
+    -bestDistanceToTarget : double
+    -bestRepairCostOnTarget : int
+    -noProgressCount : int
+    -lastReason : String
+    -lastScore : double
+    --
+    +getTarget() : EntityID
+    +calc() : RoadDetector
+    +updateInfo(MessageManager) : RoadDetector
+    +getLastReason() : String
+    +getLastScore() : double
+    +getLastCandidateCount() : int
+    +getNoProgressCount() : int
+    +getAbandonCount(EntityID) : int
+    -applySelection(EntityID, String, double) : void
+    -reviewCurrentTarget(EntityID) : void
+    -rankBlockedRoads(EntityID) : List<ScoredRoad>
+    -accessValue(Road, EntityID) : double
+    -selectReachable(EntityID, List) : ScoredRoad
+    -refreshWorldSnapshot() : void
+    -totalRepairCost(Road) : int
+    -collectRefuges() : void
+  }
+
+  class ScoredRoad <<immutable>> {
+    -roadID : EntityID
+    -score : double
+    -value : double
+    -distance : double
+  }
+
+  class URFPoliceExtActionClear {
+    -{static} STAGNANT_CLEAR_LIMIT : int
+    -clearDistance : int
+    -target : EntityID
+    -previousClearBlockade : EntityID
+    -previousRepairCost : int
+    -stagnantClearCount : int
+    -recoveryClearCount : int
+    --
+    +setTarget(EntityID) : ExtAction
+    +calc() : ExtAction
+    -findNearbyCandidate() : ClearCandidate
+    -searchAreas(EntityID) : List<EntityID>
+    -createCandidate(Blockade) : ClearCandidate
+    -isBetterCandidate(ClearCandidate, ClearCandidate) : boolean
+    -updateClearProgress(Blockade) : void
+    -createRecoveryClear(ClearCandidate) : ActionClear
+    -closestPointOnSegment(double, double, double, double, double, double) : ClosestPoint
+  }
+
+  class ClearCandidate <<immutable>> {
+    -blockade : Blockade
+    -distance : double
+    -pointX : double
+    -pointY : double
+  }
+
+  class ClosestPoint <<immutable>> {
+    -x : double
+    -y : double
+    -distance : double
+  }
+
+  class URFPoliceExtActionMove {
+    -{static} AIM_MARGIN : double
+    -{static} BEARING_COUNT : int
+    -{static} BEARING_STEP : int
+    -clearDistance : int
+    -roadDetector : RoadDetector
+    -roadTarget : EntityID
+    -searchTarget : EntityID
+    -requestedTarget : EntityID
+    -targetSource : String
+    -standingOnTarget : boolean
+    -neighbourIndex : int
+    -bearingIndex : int
+    --
+    +setTarget(EntityID) : ExtAction
+    +calc() : ExtAction
+    +getRoadTarget() : EntityID
+    +getSearchTarget() : EntityID
+    +getRequestedTarget() : EntityID
+    +getTargetSource() : String
+    +isStandingOnTarget() : boolean
+    -readRoadTarget() : EntityID
+    -pushThrough() : Action
+    -stepTo(EntityID, List) : Action
+    -passableNeighbours(EntityID) : List<EntityID>
+    -bearingClear() : Action
+    -nextBearing() : double
+    -anyNearbyBlockade() : Blockade
+    -allNeighbours(EntityID) : List<EntityID>
+  }
+
+  class URFRefugeDoorSweep <<registry>> {
+    -{static} INSTANCES : Map<EntityID, URFRefugeDoorSweep>
+    -{static} RECHECK_INTERVAL : int
+    -{static} ATTEMPT_BUDGET : int
+    -{static} SWEEP_DEADLINE : int
+    -doors : List<EntityID>
+    -suppressUntil : Map<EntityID, Integer>
+    -currentDoor : EntityID
+    -confirmedCount : int
+    -abandonedCount : int
+    --
+    +{static} forAgent(EntityID) : URFRefugeDoorSweep
+    +nextDoor(AgentInfo, WorldInfo) : EntityID
+    +getDoorCount() : int
+    +getConfirmedCount() : int
+    +getAbandonedCount() : int
+    +getPendingCount() : int
+    +toLogFields() : String
+    -nearestPendingDoor(EntityID, WorldInfo, int) : EntityID
+    -isObservedClear(EntityID, WorldInfo) : boolean
+    -collectDoors(WorldInfo) : void
+  }
+
+  class URFStuckAgentEscort <<registry>> {
+    -{static} INSTANCES : Map<EntityID, URFStuckAgentEscort>
+    -{static} STALL_LIMIT : int
+    -{static} ESCORT_BUDGET : int
+    -{static} RELEASE_COOLDOWN : int
+    -sightings : Map<EntityID, Sighting>
+    -suppressUntil : Map<EntityID, Integer>
+    -escortAmbulance : EntityID
+    -escortRoad : EntityID
+    -escortStartedCount : int
+    -escortFreedCount : int
+    --
+    +{static} forAgent(EntityID) : URFStuckAgentEscort
+    +observe(AgentInfo, MessageManager) : void
+    +nextTarget(AgentInfo, WorldInfo) : EntityID
+    +getEscortAmbulance() : EntityID
+    +getStalledCount() : int
+    +toLogFields() : String
+    -chooseEscort(AgentInfo, WorldInfo, int) : EntityID
+    -isStalled(Sighting, int) : boolean
+    -releaseEscort(int) : void
+    -resolveRoad(EntityID, WorldInfo) : EntityID
+  }
+
+  class Sighting <<immutable state>> {
+    -position : EntityID
+    -action : int
+    -stallStartTime : int
+    -lastSeenTime : int
+    -buried : boolean
+  }
+
+  ' REMOVE this class and its edges if you do not wire the
+  ' configuration layer. The diagram must match the ZIP.
+  class URFPoliceConfig {
+    -{static} PREFIX : String
+    -properties : Properties
+    -source : String
+    -invalidKeys : List<String>
+    --
+    +URFPoliceConfig(DevelopData)
+    +getRefugeWeight() : double
+    +getDistanceScale() : double
+    +getStickyMultiplier() : double
+    +getNoProgressLimit() : int
+    +getSweepDeadline() : int
+    +getEscortStallLimit() : int
+    +getSource() : String
+    +toLogFields() : String
+    -readDouble(DevelopData, String, double) : double
+    -readInt(DevelopData, String, int) : int
+  }
+}
+
+
+' ------------------------------------------------------------
+' Measurement. Never changes a decision.
+' ------------------------------------------------------------
+package "sample_team.module.complex.police.observation" {
+
+  class URFObservedRoadDetector {
+    -metrics : URFPoliceMetrics
+    -lastCalcNanos : long
+    +calc() : RoadDetector
+    +getLastCalcNanos() : long
+  }
+
+  class URFObservedExtActionClear {
+    -{static} PRINT_OBSERVATION : boolean
+    -requestedTarget : EntityID
+    -observedCycles : long
+    -observedClearCount : long
+    -observedHandoffCount : long
+    +setTarget(EntityID) : ExtAction
+    +calc() : ExtAction
+    +getObservedClearCount() : long
+    +getAverageCycleNanos() : double
+  }
+
+  class URFObservedExtActionMove {
+    -{static} PRINT_OBSERVATION : boolean
+    -observedCycles : long
+    -observedMoveCount : long
+    -observedNullCount : long
+    -observedSelfLoopCount : long
+    -observedRoadTargetCount : long
+    -observedSearchTargetCount : long
+    +calc() : ExtAction
+    +getObservedNullCount() : long
+    +getObservedSelfLoopCount() : long
+    +getAverageCycleNanos() : double
+    -isSelfLoop(ActionMove) : boolean
+  }
+
+  class URFPoliceMetrics <<registry>> {
+    +{static} forAgent(EntityID) : URFPoliceMetrics
+    +recordPosition(int, EntityID, double, double) : void
+    +recordTarget(EntityID) : void
+    +recordClearModuleResult(int, EntityID, Action, long) : void
+    +recordMoveModuleResult(int, EntityID, Action, long) : void
+    +toLogLine() : String
+  }
+
+  class URFPoliceStuckDetector <<registry>> {
+    +{static} forAgent(EntityID) : URFPoliceStuckDetector
+    +evaluate(URFPoliceMetrics) : void
+    +getStatus() : String
+    +getConfirmedStuckEvents() : int
+    +toLogFields() : String
+  }
+
+  class URFPoliceCsvExporter <<utility>> {
+    -{static} SCHEMA_VERSION : String
+    -{static} RUN_ID : String
+    -{static} LAST_EXPORTED_TIME : Map<Integer, Integer>
+    +{static} export(URFPoliceMetrics, URFPoliceStuckDetector) : void
+  }
+}
+
+
+' ------------------------------------------------------------
+' Inheritance
+' ------------------------------------------------------------
+RoadDetector <|-- URFRoadDetector
+URFRoadDetector <|-- URFObservedRoadDetector
+
+ExtAction <|-- URFPoliceExtActionClear
+URFPoliceExtActionClear <|-- URFObservedExtActionClear
+
+DefaultExtActionMove <|-- URFPoliceExtActionMove
+URFPoliceExtActionMove <|-- URFObservedExtActionMove
+
+
+' ------------------------------------------------------------
+' Composition - nested value objects owned by their outer class
+' ------------------------------------------------------------
+URFRoadDetector *-- ScoredRoad
+URFPoliceExtActionClear *-- ClearCandidate
+URFPoliceExtActionClear *-- ClosestPoint
+URFStuckAgentEscort *-- Sighting
+
+
+' ------------------------------------------------------------
+' Association - injected or looked-up collaborators
+' ------------------------------------------------------------
+URFRoadDetector o-- PathPlanning : "injected via\nModuleManager"
+URFRoadDetector o-- URFPoliceConfig
+URFPoliceExtActionMove o-- RoadDetector : "shared instance from\nModuleManager, read only"
+
+URFRoadDetector ..> URFRefugeDoorSweep : "nextDoor()"
+URFRoadDetector ..> URFStuckAgentEscort : "observe(), nextTarget()"
+
+URFObservedRoadDetector ..> URFPoliceMetrics
+URFPoliceExtActionClear ..> URFPoliceMetrics
+URFPoliceExtActionClear ..> URFPoliceStuckDetector
+URFPoliceExtActionClear ..> URFPoliceCsvExporter
+URFPoliceExtActionMove ..> URFPoliceMetrics
+URFPoliceExtActionMove ..> URFPoliceStuckDetector
+URFPoliceExtActionMove ..> URFPoliceCsvExporter
+
+URFPoliceCsvExporter ..> URFPoliceMetrics
+URFPoliceCsvExporter ..> URFPoliceStuckDetector
+
+URFPoliceConfig ..> DevelopData
+
+note bottom of URFPoliceExtActionMove
+  Tactics passes this module only the Search
+  target. The road target is read from the
+  shared RoadDetector instance, not from a
+  static bridge.
+end note
+
+note bottom of URFObservedRoadDetector
+  Every observed class overrides calc(),
+  calls super.calc(), and records only.
+  No observed class changes a decision.
+end note
+
+@enduml
+
+
+' ============================================================
+
+
+@startuml URF-class-overview
+
+skinparam monochrome true
+skinparam shadowing false
+skinparam defaultFontName Sans
+hide members
+hide circle
+
+title URF Police Force - structure overview
+
+package "adf-core-java" {
+  abstract class AbstractModule
+  abstract class RoadDetector
+  abstract class ExtAction
+  class DefaultExtActionMove
+  abstract class PathPlanning
+}
+
+package "improvement   <<decides>>" {
+  class URFRoadDetector
+  class URFPoliceExtActionClear
+  class URFPoliceExtActionMove
+  class URFRefugeDoorSweep
+  class URFStuckAgentEscort
+  class URFPoliceConfig
+}
+
+package "observation   <<measures>>" {
+  class URFObservedRoadDetector
+  class URFObservedExtActionClear
+  class URFObservedExtActionMove
+  class URFPoliceMetrics
+  class URFPoliceStuckDetector
+  class URFPoliceCsvExporter
+}
+
+AbstractModule <|-- RoadDetector
+AbstractModule <|-- ExtAction
+AbstractModule <|-- PathPlanning
+ExtAction <|-- DefaultExtActionMove
+
+RoadDetector <|-- URFRoadDetector
+URFRoadDetector <|-- URFObservedRoadDetector
+ExtAction <|-- URFPoliceExtActionClear
+URFPoliceExtActionClear <|-- URFObservedExtActionClear
+DefaultExtActionMove <|-- URFPoliceExtActionMove
+URFPoliceExtActionMove <|-- URFObservedExtActionMove
+
+URFRoadDetector o-- PathPlanning
+URFRoadDetector o-- URFPoliceConfig
+URFPoliceExtActionMove o-- RoadDetector
+URFRoadDetector ..> URFRefugeDoorSweep
+URFRoadDetector ..> URFStuckAgentEscort
+
+URFObservedRoadDetector ..> URFPoliceMetrics
+URFObservedExtActionClear ..> URFPoliceMetrics
+URFObservedExtActionMove ..> URFPoliceMetrics
+URFPoliceCsvExporter ..> URFPoliceMetrics
+URFPoliceCsvExporter ..> URFPoliceStuckDetector
+
+@enduml

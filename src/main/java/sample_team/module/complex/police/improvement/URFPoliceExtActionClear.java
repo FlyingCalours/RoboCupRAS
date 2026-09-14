@@ -154,7 +154,7 @@ public class URFPoliceExtActionClear extends ExtAction {
 
     long startNanos = System.nanoTime();
     this.result = null;
-    String decision = "NO_LOCAL_CLEAR";
+    URFClearDecision decision = URFClearDecision.NO_LOCAL_CLEAR;
     ClearCandidate candidate = this.findNearbyCandidate();
 
     if (candidate != null) {
@@ -164,7 +164,7 @@ public class URFPoliceExtActionClear extends ExtAction {
           this.result = this.createRecoveryClear(candidate);
           this.recoveryClearCount++;
           this.stagnantClearCount = 0;
-          decision = "RECOVERY_DIRECTIONAL_CLEAR";
+          decision = URFClearDecision.RECOVERY_DIRECTIONAL_CLEAR;
         } 
         else {
           /*
@@ -174,7 +174,7 @@ public class URFPoliceExtActionClear extends ExtAction {
            * No MOVE action is generated here.
            */
           this.result = new ActionClear(candidate.blockade);
-          decision = "CLEAR_NEAREST_BLOCKADE";
+          decision = URFClearDecision.CLEAR_NEAREST_BLOCKADE;
         }
       } 
       else {
@@ -188,12 +188,12 @@ public class URFPoliceExtActionClear extends ExtAction {
          * to the configured MOVE module.
          */
         this.resetPreviousClearAttempt();
-        decision = "BLOCKADE_OUTSIDE_CLEAR_RANGE_HANDOFF";
+        decision = URFClearDecision.BLOCKADE_OUTSIDE_CLEAR_RANGE_HANDOFF;
       }
     } 
     else {
       this.resetPreviousClearAttempt();
-      decision = "ROAD_CLEAR_OR_NO_LOCAL_BLOCKADE";
+      decision = URFClearDecision.ROAD_CLEAR_OR_NO_LOCAL_BLOCKADE;
     }
     long elapsedNanos = System.nanoTime() - startNanos;
 

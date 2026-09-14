@@ -39,8 +39,14 @@ public final class URFPoliceMetrics {
   private double lastStepDistance;
   private double totalObservedDisplacement;
 
-  private String lastActionType;
-  private String lastActionSource;
+  private URFActionType lastActionType;
+  private URFActionSource lastActionSource;
+
+  /*
+   * Class simple name of an Action the observation layer does not
+   * model. Kept so the action log field is unchanged for OTHER.
+   */
+  private String otherActionLabel;
 
   private List<EntityID> lastPath;
   private int lastPathLength;
@@ -107,8 +113,9 @@ public final class URFPoliceMetrics {
 
     this.lastFinalActionTime = -1;
 
-    this.lastActionType = "NONE";
-    this.lastActionSource = "NONE";
+    this.lastActionType = URFActionType.NONE;
+    this.lastActionSource = URFActionSource.NONE;
+    this.otherActionLabel = null;
 
     this.lastPath = Collections.emptyList();
 
@@ -201,7 +208,7 @@ public final class URFPoliceMetrics {
    * Backward-compatible PO-3 method.
    */
   public synchronized void recordAction(Action action) {
-    recordActionInternal(action,"UNSPECIFIED");
+    recordActionInternal(action, URFActionSource.UNSPECIFIED);
   }
 
   /**
@@ -232,7 +239,7 @@ public final class URFPoliceMetrics {
       this.clearModuleActionRestCount++;
     }
 
-    recordFinalActionInternal(simulationTime, action, "CLEAR_MODULE");
+    recordFinalActionInternal(simulationTime, action, URFActionSource.CLEAR_MODULE);
   }
 
   /**
@@ -258,7 +265,8 @@ public final class URFPoliceMetrics {
 
       // Observation only.
       // We do not change DefaultExtActionMove.result.
-      recordFinalActionInternal(simulationTime, new ActionRest(), "TACTICS_FALLBACK_REST");
+      recordFinalActionInternal(simulationTime, new ActionRest(),
+          URFActionSource.TACTICS_FALLBACK_REST);
       return;
     }
     if (action instanceof ActionMove) {
@@ -267,10 +275,11 @@ public final class URFPoliceMetrics {
     else if (action instanceof ActionRest) {
       this.moveModuleActionRestCount++;
     }
-    recordFinalActionInternal(simulationTime, action, "MOVE_MODULE");
+    recordFinalActionInternal(simulationTime, action, URFActionSource.MOVE_MODULE);
   }
 
-  private void recordFinalActionInternal(int simulationTime, Action action, String source) {
+  private void recordFinalActionInternal(int simulationTime, Action action,
+      URFActionSource source) {
     if (simulationTime == this.lastFinalActionTime) {
       updateLastActionSnapshot(action, source);
       return;
@@ -281,20 +290,20 @@ public final class URFPoliceMetrics {
     recordActionInternal(action, source);
   }
 
-  private void recordActionInternal(Action action, String source) {
-    this.lastActionSource = source == null ? "UNKNOWN" : source;
+  private void recordActionInternal(Action action, URFActionSource source) {
+    this.lastActionSource = source == null ? URFActionSource.UNKNOWN : source;
 
     resetLastActionDetails();
 
     if (action == null) {
-      this.lastActionType = "NONE";
+      this.lastActionType = URFActionType.NONE;
       return;
     }
 
     if (action instanceof ActionMove) {
       ActionMove move = (ActionMove) action;
 
-      this.lastActionType = "MOVE";
+      this.lastActionType = URFActionType.MOVE;
       this.moveCount++;
       this.lastPath = Collections.unmodifiableList(new ArrayList<>(move.getPath()));
       this.lastPathLength = this.lastPath.size();
@@ -306,7 +315,7 @@ public final class URFPoliceMetrics {
 
     if (action instanceof ActionClear) {
       ActionClear clear = (ActionClear) action;
-      this.lastActionType = "CLEAR";
+      this.lastActionType = URFActionType.CLEAR;
       this.clearCount++;
       this.lastClearTarget = clear.getTarget();
       this.lastClearUsesBlockadeTarget = clear.getUseOldFunction();
@@ -317,29 +326,30 @@ public final class URFPoliceMetrics {
     }
 
     if (action instanceof ActionRest) {
-      this.lastActionType = "REST";
+      this.lastActionType = URFActionType.REST;
       this.restCount++;
       return;
     }
 
-    this.lastActionType = action.getClass().getSimpleName();
+    this.lastActionType = URFActionType.OTHER;
+    this.otherActionLabel = action.getClass().getSimpleName();
     this.otherActionCount++;
   }
 
-  private void updateLastActionSnapshot(Action action, String source) {
-    this.lastActionSource = source == null ? "UNKNOWN" : source;
+  private void updateLastActionSnapshot(Action action, URFActionSource source) {
+    this.lastActionSource = source == null ? URFActionSource.UNKNOWN : source;
 
     resetLastActionDetails();
 
     if (action == null) {
-      this.lastActionType = "NONE";
+      this.lastActionType = URFActionType.NONE;
       return;
     }
 
     if (action instanceof ActionMove) {
       ActionMove move = (ActionMove) action;
 
-      this.lastActionType = "MOVE";
+      this.lastActionType = URFActionType.MOVE;
       this.lastPath = Collections.unmodifiableList(new ArrayList<>(move.getPath()));
       this.lastPathLength = this.lastPath.size();
       this.lastMoveUsesPosition = move.getUsePosition();
@@ -351,7 +361,7 @@ public final class URFPoliceMetrics {
 
     if (action instanceof ActionClear) {
       ActionClear clear = (ActionClear) action;
-      this.lastActionType = "CLEAR";
+      this.lastActionType = URFActionType.CLEAR;
       this.lastClearTarget = clear.getTarget();
       this.lastClearUsesBlockadeTarget = clear.getUseOldFunction();
       this.lastClearX = clear.getPosX();
@@ -361,14 +371,16 @@ public final class URFPoliceMetrics {
     }
 
     if (action instanceof ActionRest) {
-      this.lastActionType = "REST";
+      this.lastActionType = URFActionType.REST;
       return;
     }
 
-    this.lastActionType = action.getClass().getSimpleName();
+    this.lastActionType = URFActionType.OTHER;
+    this.otherActionLabel = action.getClass().getSimpleName();
   }
 
   private void resetLastActionDetails() {
+    this.otherActionLabel = null;
     this.lastPath = Collections.emptyList();
     this.lastPathLength = 0;
     this.lastClearTarget = null;
@@ -440,12 +452,23 @@ public final class URFPoliceMetrics {
     return this.lastClearTarget;
   }
 
-  public synchronized String getLastActionType() {
+  public synchronized URFActionType getLastActionType() {
     return this.lastActionType;
   }
 
-  public synchronized String getLastActionSource() {
+  public synchronized URFActionSource getLastActionSource() {
     return this.lastActionSource;
+  }
+
+  /**
+   * @return the text previously written to the action log and CSV field
+   */
+  public synchronized String getLastActionLabel() {
+    if (this.lastActionType == URFActionType.OTHER
+        && this.otherActionLabel != null) {
+      return this.otherActionLabel;
+    }
+    return this.lastActionType.name();
   }
 
   public synchronized List<EntityID> getLastPath() {
@@ -603,7 +626,7 @@ public final class URFPoliceMetrics {
         + " stepDistance=" + this.lastStepDistance
         + " totalDisplacement=" + this.totalObservedDisplacement
         + " target=" + idValue(this.selectedTarget)
-        + " action=" + this.lastActionType
+        + " action=" + this.getLastActionLabel()
         + " actionSource=" + this.lastActionSource
         + " pathLength=" + this.lastPathLength
         + " moveUsePosition=" + this.lastMoveUsesPosition

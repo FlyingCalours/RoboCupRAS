@@ -56,7 +56,7 @@ public final class URFRefugeDoorSweep {
    *
    * Set to Integer.MAX_VALUE to sweep for the whole scenario.
    */
-  private static final int SWEEP_DEADLINE = 150;
+  private static final int SWEEP_DEADLINE = 40;
 
   private final List<EntityID> doors;
   private final Map<EntityID, Integer> suppressUntil;

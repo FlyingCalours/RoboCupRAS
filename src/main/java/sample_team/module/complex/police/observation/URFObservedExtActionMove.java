@@ -11,6 +11,7 @@ import adf.core.agent.module.ModuleManager;
 import adf.core.component.extaction.ExtAction;
 import java.util.List;
 import rescuecore2.worldmodel.EntityID;
+import sample_team.module.complex.police.improvement.URFMoveTargetSource;
 import sample_team.module.complex.police.improvement.URFPoliceExtActionMove;
 
 /**
@@ -98,14 +99,14 @@ public class URFObservedExtActionMove extends URFPoliceExtActionMove {
     this.observedTotalNanos = this.observedTotalNanos + this.lastCycleNanos;
     this.observedCycles++;
 
-    String source = super.getTargetSource();
-    if (SOURCE_PUSH_THROUGH.equals(source)) {
+    URFMoveTargetSource source = super.getTargetSource();
+    if (source == URFMoveTargetSource.PUSH_THROUGH) {
       this.observedPushThroughCount++;
     }
-    else if (SOURCE_ROAD_TARGET.equals(source)) {
+    else if (source == URFMoveTargetSource.ROAD_TARGET) {
       this.observedRoadTargetCount++;
     }
-    else if (SOURCE_SEARCH_TARGET.equals(source)) {
+    else if (source == URFMoveTargetSource.SEARCH_TARGET) {
       this.observedSearchTargetCount++;
     }
 

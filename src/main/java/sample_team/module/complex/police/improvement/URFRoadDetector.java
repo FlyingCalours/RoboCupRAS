@@ -27,8 +27,6 @@ import rescuecore2.standard.entities.StandardEntityURN;
 import rescuecore2.worldmodel.EntityID;
 
 import adf.core.agent.communication.MessageManager;
-import adf.core.agent.communication.standard.bundle.information.MessageAmbulanceTeam;
-import java.util.TreeMap;
 
 /**
  * Independent URF Police road target selection module.
@@ -50,30 +48,11 @@ import java.util.TreeMap;
  *
  * - blockade selection inside a road (URFPoliceExtActionClear owns that),
  * - cluster ownership or multi-Police coordination,
- * - radio message processing,
  * - exploration.
  *
  * Those responsibilities belong to later independent URF modules.
  */
 public class URFRoadDetector extends RoadDetector {
-
-  /** Returned when the agent has no known position. */
-  public static final String REASON_NO_POSITION = "NO_POSITION";
-
-  /** Returned while the refuge door sweep is driving the target. */
-  public static final String REASON_REFUGE_DOOR_SWEEP = "REFUGE_DOOR_SWEEP";
-
-  /** Returned while a stuck ambulance escort is driving the target. */
-  public static final String REASON_ESCORT_STUCK_AGENT = "ESCORT_STUCK_AGENT";
-
-  /** Returned when no blocked road is currently known. */
-  public static final String REASON_NO_CANDIDATE = "NO_BLOCKED_ROAD_KNOWN";
-
-  /** Returned when the best scored road has a usable path. */
-  public static final String REASON_SCORED_REACHABLE = "SCORED_REACHABLE";
-
-  /** Returned when no checked road is reachable and the best score is kept. */
-  public static final String REASON_SCORED_UNREACHABLE = "SCORED_UNREACHABLE_FALLBACK";
 
   /** Maximum contribution of a road that touches a refuge. */
   private static final double W_REFUGE_ACCESS = 6.0;
@@ -140,7 +119,7 @@ public class URFRoadDetector extends RoadDetector {
   private int bestRepairCostOnTarget;
   private int noProgressCount;
 
-  private String lastReason;
+  private URFRoadTargetReason lastReason;
   private double lastScore;
   private int lastCandidateCount;
   private boolean lastTargetChanged;
@@ -172,7 +151,7 @@ public class URFRoadDetector extends RoadDetector {
     this.bestRepairCostOnTarget = Integer.MAX_VALUE;
     this.noProgressCount = 0;
 
-    this.lastReason = REASON_NO_CANDIDATE;
+    this.lastReason = URFRoadTargetReason.NO_BLOCKED_ROAD_KNOWN;
     this.lastScore = 0.0;
     this.lastCandidateCount = 0;
     this.lastTargetChanged = false;
@@ -198,7 +177,7 @@ public class URFRoadDetector extends RoadDetector {
 
     EntityID positionID = this.agentInfo.getPosition();
     if (positionID == null) {
-      this.applySelection(null, REASON_NO_POSITION, 0.0);
+      this.applySelection(null, URFRoadTargetReason.NO_POSITION, 0.0);
       return this;
     }
 
@@ -209,7 +188,7 @@ public class URFRoadDetector extends RoadDetector {
     .nextDoor(this.agentInfo, this.worldInfo);
 
     if (door != null) {
-      this.applySelection(door, REASON_REFUGE_DOOR_SWEEP, 0.0);
+      this.applySelection(door, URFRoadTargetReason.REFUGE_DOOR_SWEEP, 0.0);
       return this;
     }
 
@@ -218,7 +197,7 @@ public class URFRoadDetector extends RoadDetector {
     .nextTarget(this.agentInfo, this.worldInfo);
 
     if (rescue != null) {
-      this.applySelection(rescue, REASON_ESCORT_STUCK_AGENT, 0.0);
+      this.applySelection(rescue, URFRoadTargetReason.ESCORT_STUCK_AGENT, 0.0);
       return this;
     }
 
@@ -234,13 +213,14 @@ public class URFRoadDetector extends RoadDetector {
     this.lastCandidateCount = ranked.size();
 
     if (ranked.isEmpty()) {
-      this.applySelection(null, REASON_NO_CANDIDATE, 0.0);
+      this.applySelection(null, URFRoadTargetReason.NO_BLOCKED_ROAD_KNOWN, 0.0);
       return this;
     }
 
     ScoredRoad reachable = this.selectReachable(positionID, ranked);
     if (reachable != null) {
-      this.applySelection(reachable.roadID, REASON_SCORED_REACHABLE, reachable.score);
+      this.applySelection(reachable.roadID, URFRoadTargetReason.SCORED_REACHABLE,
+          reachable.score);
     }
     else {
       /*
@@ -250,7 +230,8 @@ public class URFRoadDetector extends RoadDetector {
        * URFPoliceExtActionClear can still make local progress toward it.
        */
       ScoredRoad best = ranked.get(0);
-      this.applySelection(best.roadID, REASON_SCORED_UNREACHABLE, best.score);
+      this.applySelection(best.roadID,
+          URFRoadTargetReason.SCORED_UNREACHABLE_FALLBACK, best.score);
     }
 
     // Can Add Logging of system.out.println here
@@ -279,9 +260,9 @@ public class URFRoadDetector extends RoadDetector {
 
 
   /**
-   * @return the reason string produced by the most recent calc call
+   * @return the reason produced by the most recent calc call
    */
-  public final String getLastReason() {
+  public final URFRoadTargetReason getLastReason() {
     return this.lastReason;
   }
 
@@ -333,10 +314,11 @@ public class URFRoadDetector extends RoadDetector {
    * Store the selection and reset progress tracking when the road changes.
    *
    * @param roadID the newly selected road, may be null
-   * @param reason the decision reason string
+   * @param reason the decision reason
    * @param score the score of the selected road
    */
-  private void applySelection(EntityID roadID, String reason, double score) {
+  private void applySelection(EntityID roadID, URFRoadTargetReason reason,
+      double score) {
     boolean changed = roadID == null ? this.result != null : !roadID.equals(this.result);
     if (changed) {
       this.bestDistanceToTarget = Double.MAX_VALUE;

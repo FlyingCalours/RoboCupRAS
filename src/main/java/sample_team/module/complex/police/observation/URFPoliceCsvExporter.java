@@ -80,7 +80,7 @@ public final class URFPoliceCsvExporter {
 
       String row = csv(SCHEMA_VERSION) + "," + csv(RUN_ID) + "," + time + "," + agent + "," + idValue(metrics.getCurrentPosition()) 
                    + "," + metrics.getCurrentX() + "," + metrics.getCurrentY() + "," + idValue(metrics.getSelectedTarget()) + ","
-                   + csv(metrics.getLastActionType()) + "," + csv(metrics.getLastActionSource()) + "," + metrics.getLastPathLength()
+                   + csv(metrics.getLastActionLabel()) + "," + csv(metrics.getLastActionSource().name()) + "," + metrics.getLastPathLength()
                    + "," + metrics.getLastStepDistance() + "," + metrics.getTotalObservedDisplacement() + "," 
                    + metrics.isLastMoveUsingPosition() + "," + metrics.getLastMoveX() + "," + metrics.getLastMoveY() + ","
                    + idValue(metrics.getLastClearTarget()) + "," + metrics.isLastClearUsingBlockadeTarget() + "," 
@@ -88,7 +88,7 @@ public final class URFPoliceCsvExporter {
                    + "," + idValue(metrics.getLastMoveRequestTarget())
                    + "," + metrics.getMoveCount() + "," + metrics.getClearCount() + "," + metrics.getRestCount() + "," 
                    + metrics.getOtherActionCount() + "," + metrics.getTargetChangeCount() + "," + metrics.getSamePositionStreak()
-                   + "," + metrics.getMaxSamePositionStreak()+ "," + metrics.isPossibleStuck() + "," + csv(stuckDetector.getStatus())
+                   + "," + metrics.getMaxSamePositionStreak()+ "," + metrics.isPossibleStuck() + "," + csv(stuckDetector.getStatus().name())
                    + "," + stuckDetector.getConsecutiveFailedMoves() + "," + stuckDetector.getConfirmedStuckEvents() + "," 
                    + metrics.getClearModuleCallCount() + "," + metrics.getClearModuleNullResultCount() + ","
                    + metrics.getClearModuleActionClearCount() + "," + metrics.getClearModuleActionMoveCount() + ","

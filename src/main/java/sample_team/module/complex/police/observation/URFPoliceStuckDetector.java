@@ -35,8 +35,8 @@ private final int agentId;
    * Action selected during the previous timestep.
    * Its result is evaluated when the next timestep arrives.
    */
-  private String previousActionType;
-  private String previousActionSource;
+  private URFActionType previousActionType;
+  private URFActionSource previousActionSource;
   private EntityID previousActionTarget;
   private int previousPathLength;
 
@@ -63,20 +63,27 @@ private final int agentId;
    */
   private boolean possibleStuckActive;
   private boolean confirmedStuckActive;
-  private String status;
-  private String reason;
-  private String lastMoveOutcome;
+  private URFStuckStatus status;
+  private URFStuckReason reason;
+  private URFMoveOutcome lastMoveOutcome;
+
+  /*
+   * Raw action label behind URFStuckReason.OTHER_ACTION_TYPE, kept so
+   * the reason log field is unchanged.
+   */
+  private String otherActionLabel;
   private URFPoliceStuckDetector(EntityID agentId) {
     this.agentId = agentId.getValue();
     this.lastEvaluationTime = -1;
-    this.previousActionType = "NONE";
-    this.previousActionSource = "NONE";
+    this.previousActionType = URFActionType.NONE;
+    this.previousActionSource = URFActionSource.NONE;
     this.previousActionTarget = null;
     this.previousPathLength = 0;
     this.lastFailedMoveTarget = null;
-    this.status = "INITIALIZING";
-    this.reason = "WAITING_FOR_FIRST_ACTION_OUTCOME";
-    this.lastMoveOutcome = "NOT_EVALUATED";
+    this.status = URFStuckStatus.INITIALIZING;
+    this.reason = URFStuckReason.WAITING_FOR_FIRST_ACTION_OUTCOME;
+    this.lastMoveOutcome = URFMoveOutcome.NOT_EVALUATED;
+    this.otherActionLabel = null;
   }
 
   public static URFPoliceStuckDetector forAgent(EntityID agentId) {
@@ -123,12 +130,12 @@ private final int agentId;
     boolean confirmed = this.consecutiveFailedMoves >= CONFIRMED_STUCK_AFTER_FAILED_MOVES 
                         && this.consecutiveSameTargetFailedMoves >= CONFIRMED_STUCK_SAME_TARGET_FAILURES;
     if (confirmed) {
-      this.status = "CONFIRMED_STUCK";
-      this.reason = "REPEATED_MOVE_NO_PROGRESS_SAME_TARGET";
+      this.status = URFStuckStatus.CONFIRMED_STUCK;
+      this.reason = URFStuckReason.REPEATED_MOVE_NO_PROGRESS_SAME_TARGET;
     } 
     else if (possible) {
-      this.status = "POSSIBLE_STUCK";
-      this.reason = "REPEATED_MOVE_NO_PROGRESS";
+      this.status = URFStuckStatus.POSSIBLE_STUCK;
+      this.reason = URFStuckReason.REPEATED_MOVE_NO_PROGRESS;
     }
     else {
       classifyCurrentAction(metrics);
@@ -174,8 +181,8 @@ private final int agentId;
      * activities and must not increase MOVE-failure
      * evidence.
      */
-    if (!"MOVE".equals(this.previousActionType)) {
-      this.lastMoveOutcome = "NOT_MOVE";
+    if (this.previousActionType != URFActionType.MOVE) {
+      this.lastMoveOutcome = URFMoveOutcome.NOT_MOVE;
       resetFailedMoveEvidence();
       return;
     }
@@ -185,7 +192,7 @@ private final int agentId;
      * separately from physical stuck behaviour.
      */
     if (this.previousPathLength <= 0) {
-      this.lastMoveOutcome = "NO_PATH";
+      this.lastMoveOutcome = URFMoveOutcome.NO_PATH;
       resetFailedMoveEvidence();
       return;
     }
@@ -204,7 +211,7 @@ private final int agentId;
      */
     boolean coordinateProgress = metrics.getLastStepDistance() >= MIN_PROGRESS_DISTANCE;
     if (areaChanged || coordinateProgress) {
-      this.lastMoveOutcome = "PROGRESS";
+      this.lastMoveOutcome = URFMoveOutcome.PROGRESS;
       resetFailedMoveEvidence();
       return;
     }
@@ -213,7 +220,7 @@ private final int agentId;
      * Previous MOVE had a path but produced no
      * meaningful observed movement.
      */
-    this.lastMoveOutcome = "NO_PROGRESS";
+    this.lastMoveOutcome = URFMoveOutcome.NO_PROGRESS;
     this.consecutiveFailedMoves++;
     this.totalFailedMoveOutcomes++;
 
@@ -239,44 +246,45 @@ private final int agentId;
    * Classifies normal non-stuck states.
    */
   private void classifyCurrentAction(URFPoliceMetrics metrics) {
-    String actionType = metrics.getLastActionType();
-    String actionSource = metrics.getLastActionSource();
-    if ("CLEAR".equals(actionType)) {
-      this.status = "CLEARING";
-      this.reason = "CLEAR_ACTION_ACTIVE";
+    URFActionType actionType = metrics.getLastActionType();
+    URFActionSource actionSource = metrics.getLastActionSource();
+    if (actionType == URFActionType.CLEAR) {
+      this.status = URFStuckStatus.CLEARING;
+      this.reason = URFStuckReason.CLEAR_ACTION_ACTIVE;
       return;
     }
 
-    if ("REST".equals(actionType)) {
-      if ("TACTICS_FALLBACK_REST".equals(actionSource)) {
-        this.status = "NO_MOVE_RESULT";
-        this.reason = "MOVE_MODULE_RETURNED_NULL";
+    if (actionType == URFActionType.REST) {
+      if (actionSource == URFActionSource.TACTICS_FALLBACK_REST) {
+        this.status = URFStuckStatus.NO_MOVE_RESULT;
+        this.reason = URFStuckReason.MOVE_MODULE_RETURNED_NULL;
       } 
       else {
-        this.status = "RESTING";
-        this.reason = "REST_ACTION_ACTIVE";
+        this.status = URFStuckStatus.RESTING;
+        this.reason = URFStuckReason.REST_ACTION_ACTIVE;
       }
       return;
     }
-    if ("MOVE".equals(actionType)) {
+    if (actionType == URFActionType.MOVE) {
       if (metrics.getLastPathLength() <= 0) {
-        this.status = "MOVE_WITHOUT_PATH";
-        this.reason = "MOVE_ACTION_HAS_EMPTY_PATH";
+        this.status = URFStuckStatus.MOVE_WITHOUT_PATH;
+        this.reason = URFStuckReason.MOVE_ACTION_HAS_EMPTY_PATH;
       } 
       else {
-        this.status = "MOVE_PENDING";
-        this.reason = "WAITING_FOR_NEXT_TIMESTEP_PROGRESS";
+        this.status = URFStuckStatus.MOVE_PENDING;
+        this.reason = URFStuckReason.WAITING_FOR_NEXT_TIMESTEP_PROGRESS;
       }
       return;
     }
-    if ("NONE".equals(actionType)) {
-      this.status = "NO_ACTION";
-      this.reason = "NO_FINAL_ACTION_RECORDED";
+    if (actionType == URFActionType.NONE) {
+      this.status = URFStuckStatus.NO_ACTION;
+      this.reason = URFStuckReason.NO_FINAL_ACTION_RECORDED;
       return;
     }
 
-    this.status = "OTHER_ACTION";
-    this.reason = actionType;
+    this.status = URFStuckStatus.OTHER_ACTION;
+    this.reason = URFStuckReason.OTHER_ACTION_TYPE;
+    this.otherActionLabel = metrics.getLastActionLabel();
   }
 
   /**
@@ -295,11 +303,12 @@ private final int agentId;
    * action source.
    */
   private static EntityID resolveCurrentActionTarget(URFPoliceMetrics metrics) {
-    String source = metrics.getLastActionSource();
-    if ("CLEAR_MODULE".equals(source)) {
+    URFActionSource source = metrics.getLastActionSource();
+    if (source == URFActionSource.CLEAR_MODULE) {
       return metrics.getLastClearRequestTarget();
     }
-    if ("MOVE_MODULE".equals(source) || "TACTICS_FALLBACK_REST".equals(source)) {
+    if (source == URFActionSource.MOVE_MODULE
+        || source == URFActionSource.TACTICS_FALLBACK_REST) {
       return metrics.getLastMoveRequestTarget();
     }
     return metrics.getSelectedTarget();
@@ -318,7 +327,7 @@ private final int agentId;
   public synchronized String toLogFields() {
     return "URF_STUCK"
            + " status=" + this.status
-           + " reason=" + this.reason
+           + " reason=" + this.reasonLabel()
            + " lastMoveOutcome=" + this.lastMoveOutcome
            + " failedMoveStreak=" + this.consecutiveFailedMoves
            + " sameTargetFailedMoveStreak=" + this.consecutiveSameTargetFailedMoves
@@ -335,8 +344,19 @@ private final int agentId;
     return this.agentId;
   }
 
-  public synchronized String getStatus() {
+  public synchronized URFStuckStatus getStatus() {
     return this.status;
+  }
+
+  /**
+   * @return the text previously written to the reason log field
+   */
+  private synchronized String reasonLabel() {
+    if (this.reason == URFStuckReason.OTHER_ACTION_TYPE
+        && this.otherActionLabel != null) {
+      return this.otherActionLabel;
+    }
+    return this.reason.name();
   }
 
   public synchronized int getConsecutiveFailedMoves() {

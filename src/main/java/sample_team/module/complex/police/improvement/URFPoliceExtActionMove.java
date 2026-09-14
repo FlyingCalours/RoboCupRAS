@@ -45,18 +45,6 @@ import sample_team.module.complex.police.observation.URFPoliceStuckDetector;
  */
 public class URFPoliceExtActionMove extends DefaultExtActionMove {
 
-  /** The road target read from the RoadDetector drove the move. */
-  public static final String SOURCE_ROAD_TARGET = "ROAD_TARGET";
-
-  /** No road target existed, so the Search target drove the move. */
-  public static final String SOURCE_SEARCH_TARGET = "SEARCH_TARGET";
-
-  /** The agent already stands on the road target and is pushing through. */
-  public static final String SOURCE_PUSH_THROUGH = "PUSH_THROUGH";
-
-  /** Neither a road target nor a Search target was available. */
-  public static final String SOURCE_NONE = "NO_TARGET";
-
   /**
    * Configuration key of the RoadDetector.
    *
@@ -96,7 +84,7 @@ public class URFPoliceExtActionMove extends DefaultExtActionMove {
   private EntityID roadTarget;
   private EntityID searchTarget;
   private EntityID requestedTarget;
-  private String targetSource;
+  private URFMoveTargetSource targetSource;
   private boolean standingOnTarget;
   private int neighbourIndex;
   private int bearingIndex;
@@ -131,7 +119,7 @@ public class URFPoliceExtActionMove extends DefaultExtActionMove {
     this.roadTarget = null;
     this.searchTarget = null;
     this.requestedTarget = null;
-    this.targetSource = SOURCE_NONE;
+    this.targetSource = URFMoveTargetSource.NO_TARGET;
     this.standingOnTarget = false;
     this.neighbourIndex = 0;
     this.bearingIndex = 0;
@@ -154,19 +142,19 @@ public class URFPoliceExtActionMove extends DefaultExtActionMove {
     if (this.standingOnTarget) {
       // Nothing to walk towards; push through instead.
       chosen = null;
-      this.targetSource = SOURCE_PUSH_THROUGH;
+      this.targetSource = URFMoveTargetSource.PUSH_THROUGH;
     }
     else if (this.roadTarget != null) {
       chosen = this.roadTarget;
-      this.targetSource = SOURCE_ROAD_TARGET;
+      this.targetSource = URFMoveTargetSource.ROAD_TARGET;
     }
     else if (target != null) {
       chosen = target;
-      this.targetSource = SOURCE_SEARCH_TARGET;
+      this.targetSource = URFMoveTargetSource.SEARCH_TARGET;
     }
     else {
       chosen = null;
-      this.targetSource = SOURCE_NONE;
+      this.targetSource = URFMoveTargetSource.NO_TARGET;
     }
 
     this.requestedTarget = chosen;
@@ -234,7 +222,7 @@ public class URFPoliceExtActionMove extends DefaultExtActionMove {
   /**
    * @return which of the two targets drove the most recent cycle
    */
-  public final String getTargetSource() {
+  public final URFMoveTargetSource getTargetSource() {
     return this.targetSource;
   }
 
