@@ -69,7 +69,7 @@ cd rcrs-server/scripts && ./start.sh
 
 Run our scripts , auto compile :
 ```bash
-cd RoboCupRAS && ./launch -all
+cd RoboCupRAS && ./gradlew clean && ./gradlew build && ./launch -all
 ```
 
 Optional : Run Specific Map on Server
