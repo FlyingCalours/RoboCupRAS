@@ -79,6 +79,13 @@ cd rcrs-server/scripts && ./start.sh -m ../maps/paris/map -c ../maps/paris/confi
 cd rcrs-server/scripts && ./start.sh -m ../maps/berlin/map -c ../maps/berlin/config
 ```
 
+Optional : Run Different Configuration in Our Repo
+```bash
+./launch.sh -all
+./launch.sh -mc config/module_baseline_urf.cfg -all
+./launch.sh -mc config/module_improved_urf.cfg -all
+```
+
 ## Documentation
 
 RCRS and adf-core doesn't provide documentation. Hence in order to understand the codes, we wrote a documentation for it.
