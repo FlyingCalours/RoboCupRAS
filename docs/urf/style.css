@@ -1,0 +1,55 @@
+/* pdf-fix.css v2 - for: pandoc ... --pdf-engine=weasyprint --css pdf-fix.css */
+
+@page { size: A4; margin: 2cm; }
+
+/* ---------- Page breaks ---------- */
+h2 { break-before: page; }               /* every ## heading starts a new page */
+h1, h2, h3, h4, h5 { break-after: avoid; } /* never strand a heading at the bottom of a page */
+
+/* ---------- Images ---------- */
+img {
+  max-width: 100%;
+  height: auto;
+  break-inside: avoid;
+  page-break-inside: avoid;   /* old name, needed by wkhtmltopdf */
+}
+
+/* ---------- Math (SVGs made by math2svg.lua) ---------- */
+.math.display svg { max-width: 100%; height: auto; }  /* shrink very wide equations */
+
+/* ---------- Code: GitHub-style gray boxes ---------- */
+code {                                   /* `inline code` */
+  font-family: "DejaVu Sans Mono", "Noto Sans Mono", monospace;
+  font-size: 0.88em;
+  background: #eff1f3;
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+}
+pre {                                    /* ``` code blocks ``` */
+  background: #f6f8fa;
+  border: 1px solid #d0d7de;
+  border-radius: 6px;
+  padding: 0.7em 0.9em;
+  line-height: 1.4;
+  white-space: pre-wrap;                 /* wrap long lines instead of cutting them */
+}
+pre code { background: none; padding: 0; border-radius: 0; }
+
+/* ---------- Tables ---------- */
+table {
+  display: table;             /* undo pandoc default "display:block", which clips wide tables */
+  width: 100%;
+  table-layout: fixed;        /* share the page width instead of growing past it */
+  border-collapse: collapse;
+  font-size: 9pt;
+}
+th, td {
+  border: 1px solid #999;
+  padding: 3px 5px;
+  vertical-align: top;
+  overflow-wrap: anywhere;    /* lets long_identifiers_like_this break */
+  word-wrap: break-word;      /* old name, needed by wkhtmltopdf */
+}
+td code, th code { word-break: break-all; }  /* code in cells wraps instead of spilling into the next column */
+thead { display: table-header-group; }                  /* repeat header on each page */
+tr    { break-inside: avoid; page-break-inside: avoid; } /* don't cut a row in half */

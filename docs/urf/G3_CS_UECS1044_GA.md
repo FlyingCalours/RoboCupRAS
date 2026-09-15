@@ -1,9 +1,10 @@
-# RCRS Agent Simulation Report
+# UECS1044 Object-Oriented Application Development
+### Group Assignment: RCRS Agent Simulation
 
 | Name | Student ID | Programme |
 | -- | -- | -- |
-| Chong Zi Yang | 2401892 | AM |
 | Carlos Wong | 2303326 | AM |
+| Chong Zi Yang | 2401892 | AM |
 
 ---
 
@@ -14,17 +15,16 @@
 3. [Architecture](#3-architecture)
 4. [Object-Oriented Design](#4-object-oriented-design)
 5. [Implementation](#5-implementation)
-6. [Experiments and Results](#6-testing-experiments-and-results)
+6. [Testing, Experiments and Results](#6-testing-experiments-and-results)
 7. [Discussion](#7-discussion)
 8. [Limitations and Future Work](#8-limitations-and-future-work)
 9.  [Conclusion](#9-conclusion)
 10. [Individual Contributions](#10-individual-contributions)
 11. [References](#11-references)
-12. [Appendix A — Submission Checklist](#appendix-a--submission-checklist)
 
 ---
 
-## 1. Introduction and Problem Statement
+## 1. Introduction and Problem Statement { #1-introduction-and-problem-statement }
 
 ### 1.1 Context
 
@@ -43,9 +43,9 @@ Our group focused development on the Police Force role. Two reasons:
 
 Neither `adf-core-java` nor `rcrs-server` ships developer documentation. Before writing code we built our own API reference by reading both repositories and extracting the classes and methods relevant to agent development. We used **markmap** to render the class relationships as an interactive parent–child map rather than working through 100+ files linearly. A large language model (Claude Opus 5) was used as a reading aid during this extraction.
 
-You can check the summarized API reference in `api_ref/` either for `index.html` or all `.md` in `core-docs` and `server-docs`.
+We provide the summarized API reference in `api_ref/` either for `index.html` or all `.md` in `core-docs` and `server-docs`.
 
-You can also check our github repo that save your time to render : [Our Github](https://github.com/FlyingCalours/RoboCupRAS/tree/main)
+API reference also available in our github repo : [Our Github](https://github.com/FlyingCalours/RoboCupRAS/tree/main)
 
 ### 1.4 Problems identified
 
@@ -59,7 +59,7 @@ Three concrete failures were observed in baseline runs, each reproducible across
 
 ---
 
-## 2. Baseline Reproduction
+## 2. Baseline Reproduction { #2-baseline-reproduction }
 
 ### 2.1 Environment
 
@@ -70,8 +70,6 @@ Three concrete failures were observed in baseline runs, each reproducible across
 | Java | OpenJDK Temurin 21 | Openjdk version "26.0.2.1" 2026-08-18 |
 | Root folder | `C:/Users/<username>/Desktop/RoboCupRescue/` | `~/Documents/java/robocup/` |
 | Repositories | rcrs-server, adf-core-java, adf-sample-agent-java | same |
-
-We developed on Linux rather than the recommended Windows 11 setup. Because the build is driven entirely by the supplied Gradle wrapper and the launch scripts are POSIX shell, no source change was required for the platform difference. The README supplies both command sets so the submission reproduces on either platform.
 
 ### 2.2 Build and run
 
@@ -103,7 +101,7 @@ cd RoboCupRAS && ./launch -all
 cd rcrs-server/scripts && ./start.sh -m ../maps/montreal/map -c ../maps/montreal/config
 ```
 
-### 2.3 Checkpoint 0 evidence
+### 2.3 Checkpoint
 
 | Evidence | Status |
 | -- | -- |
@@ -114,7 +112,7 @@ cd rcrs-server/scripts && ./start.sh -m ../maps/montreal/map -c ../maps/montreal
 
 ---
 
-## 3. Architecture
+## 3. Architecture { #3-architecture }
 
 ### 3.1 Layers
 
@@ -153,7 +151,7 @@ Note the division: the detector chooses a **destination**; the CLEAR module igno
 
 ---
 
-## 4. Object-Oriented Design
+## 4. Object-Oriented Design {#4-object-oriented-design}
 
 ### 4.1 Class structure
 
@@ -167,7 +165,7 @@ Diagram below show overall parent-child relation between important class , **doe
 
 ---
 
-## 5. Implementation
+## 5. Implementation {#5-implementation}
 
 ### 5.1 `URFRoadDetector` — police target selection
 
@@ -240,9 +238,31 @@ $$
 t^{*} = \operatorname{clamp}_{[0,1]}\left(\frac{(P-A)\cdot(B-A)}{\lVert B-A\rVert^{2}}\right), \quad Q = A + t^{*}(B-A), \quad d = \lVert P - Q\rVert
 $$
 
-The clamp is the essential part: without it the "closest point" can land outside the segment and the distance is wrong.
 
-**Worked example.** Agent at $(40000, 25000)$, blockade a 2000×2000 square with corner $A = (41000, 25000)$. Polygon distance gives 1000; centre distance gives 2236. With a clear range of 1500 the centre method would refuse a blockade the agent is standing beside.
+| Symbol | Meaning | Code variable |
+|---|---|---|
+| $P$ | Agent's position, a point $(p_x, p_y)$ | `px, py` (from `agentX, agentY`) |
+| $A$ | First endpoint of one polygon edge | `ax, ay` (from `apexes[i*2]`, `apexes[i*2+1]`) |
+| $B$ | Second endpoint of that same edge | `bx, by` (next apex, wrapping via `% pointCount`) |
+| $B - A$ | Edge vector — direction and length of the segment | `abX, abY` |
+| $P - A$ | Vector from the edge's start to the agent | `(px - ax, py - ay)` |
+| $\cdot$ | Dot product: $(u_x,u_y)\cdot(v_x,v_y) = u_xv_x + u_yv_y$ | the `* + *` in the numerator |
+| $\lVert \cdot \rVert$ | Euclidean length: $\lVert(u_x,u_y)\rVert = \sqrt{u_x^2+u_y^2}$ | `Math.hypot` |
+| $\lVert B-A \rVert^{2}$ | Squared edge length, so no square root is needed | `lengthSquared` |
+| $t$ | Fraction along the edge at which the closest point sits: $t=0$ is $A$, $t=1$ is $B$, $t=0.5$ the midpoint | `projection`, before clamping |
+| $t^{*}$ | The chosen value — $t$ after clamping | `projection`, after clamping |
+| $\operatorname{clamp}_{[0,1]}$ | Force into the interval in the subscript: below $0$ becomes $0$, above $1$ becomes $1$ | `Math.max(0.0, Math.min(1.0, projection))` |
+| $Q$ | Closest point on the segment to the agent | `closestX, closestY` |
+| $d$ | Distance from the agent to that point | `distance` |
+
+
+Any point on the infinite line through $A$ and $B$ is :
+
+$$X(t) = A + t(B-A), t \in \mathbb{R}$$
+
+since a point on a line is a start point plus some multiple of the direction.
+
+The clamp is the essential part: without it the "closest point" can land outside the segment and the distance is wrong.
 
 #### 5.2.2 Stagnation and directional recovery
 
@@ -270,26 +290,8 @@ The kernel gates a clear command on **distance**, not on road membership. We the
 
 `ActionRest` is indistinguishable from a crashed agent. MOVE must produce something legal every cycle, so the chain ends with a move-to-self rather than a null: a legal action that produces a log line and lets the stuck detector record "acting but not displacing".
 
-#### 5.3.2 Reaching the road target without shared static state
 
-Tactics hands MOVE the Search target, so the road target needs another channel. Our first design published it into a static map. That design failed twice, and both failures are worth reporting:
-
-- **It can be half-wired and still compile.** A static accessor with readers but no writer is a valid program. The map returned `null` forever, MOVE silently fell back to the Search target, and the refuge sweep selected doors nobody walked to — with no error anywhere.
-- **It goes stale.** Tactics only calls `extActionClear.setTarget(...)` when the target is non-null, so a publish on the CLEAR side could never publish a `null`, and the map would retain a target the detector had already abandoned.
-
-We replaced it by asking the framework for the detector itself:
-
-```java
-this.roadDetector = moduleManager.getModule(
-    "DefaultTacticsPoliceForce.RoadDetector",
-    "sample_team.module.complex.police.improvement.URFRoadDetector");
-```
-
-`ModuleManager` caches one instance per configuration key, so this is the same object tactics uses. Each cycle MOVE reads `roadDetector.getTarget()`. No shared mutable static, nothing to forget to publish, never stale, and no URF type coupling — `getTarget()` is declared on ADF's abstract `RoadDetector`, so the module also works against a baseline detector.
-
-Ordering is guaranteed by the fallthrough: the detector runs at the top of `think()`, MOVE at the bottom. The detector's `calc()` is deliberately *not* called here, and the detector is deliberately *not* passed to `registerModule`, since its lifecycle is already driven by tactics.
-
-#### 5.3.3 The fallback ladder
+#### 5.3.2 The fallback ladder
 
 | Rung | Condition | Action |
 | -- | -- | -- |
@@ -298,11 +300,13 @@ Ordering is guaranteed by the fallthrough: the detector runs at the top of `thin
 | 3 | no passable edge, no blockade in reach | `ActionMove(position, any neighbour)` |
 | 4 | no neighbours at all | `ActionMove(position)` — legal no-op |
 
-Exit choice rotates (`neighbourIndex % options.size()`), so an agent that fails through one exit tries a different one next cycle. Rung 3 is intentional: a refused move costs one cycle and produces a log entry, while doing nothing costs one cycle and produces nothing.
+Rung 1 is the ideal case where no blockade at the edge, direct move.
 
-Rung 2 sweeps a deterministic rotating bearing. With `BEARING_COUNT = 8` and `BEARING_STEP = 3` — coprime — the sequence is 0°, 135°, 270°, 45°, 180°, 315°, 90°, 225°, covering every direction once before repeating, with consecutive attempts far apart. No random source is used, so the escape sequence is reproducible across runs.
+Rung 2 is the bug solve of original URFPoliceExtActionClear, forced a clear make no passable became passable. Rotating bearing is the backup in case repeat clearing the same direction. `BEARING_COUNT = 8` and `BEARING_STEP = 3` — coprime — the sequence is 0°, 135°, 270°, 45°, 180°, 315°, 90°, 225°, covering every direction.
 
-This is the opposite philosophy from §5.2.1, where the geometry is computed exactly. Here the agent is already stuck, so precision has demonstrably failed and a blind sweep is the correct escalation.
+Rung 3 is edge cases where no passable edge and no blockade, just give it a try to move toward.
+
+Rung 4 is edge cases also where quite impossible to have a road with no neighbour, just move instead of rest.
 
 ### 5.4 `URFRefugeDoorSweep` — Issue 1
 
@@ -327,24 +331,22 @@ A door is a `Road` sharing an edge with a `Refuge`. Doors are collected once, de
 | 3. Commit | a door is held → return it unchanged |
 | 4. Choose | otherwise, nearest non-suppressed door, ties by entity ID |
 
-Step 1 shortens the sweep considerably, since doors often sit on the route between refuges. Step 2 is the failure recovery: without it an agent walks at an unreachable entrance for the rest of the scenario. The 50-cycle recheck exists because doors go stale — a building collapsing at t=90 can drop fresh debris on a door confirmed at t=20.
+Step 1 shortens the sweep considerably, since doors often sit on the route between refuges. Step 2 is the failure recovery: without it an agent walks at an unreachable entrance for the rest of the scenario. The 50-cycle recheck exists because doors go stale — a building collapsing at t=90 can drop fresh debris on a door confirmed at t=20. This value can be set to any value for different scenario.
 
-`SWEEP_DEADLINE = 150` stops the sweep issuing doors late in the run. This is a safety valve: worst case the sweep costs `doorCount × 30` cycles, which on a map with many refuges can consume the whole scenario and starve the scoring logic.
+`SWEEP_DEADLINE = 40` stops the sweep issuing doors late in the run. This is a safety valve: worst case the sweep costs `doorCount × 30` cycles, which on a map with many refuges can consume the whole scenario and starve the scoring logic.
 
 ### 5.5 `URFStuckAgentEscort` — Issue 3
 
 #### 5.5.1 No new message type was needed
 
-The obvious design is a custom ambulance-side "help me" broadcast. A probe run showed this unnecessary. Every police agent already receives the full ambulance roster every cycle:
+The obvious design is a custom ambulance-side "help me" broadcast. Every police agent already receives the full ambulance roster every cycle:
 
 ```
 ambulance=24   on 660 of 768 logged cycles
 ambulance=0    only at t=1, t=2, t=3 (comms warm-up)
 ```
 
-24 is the entire ambulance team and the count is flat, meaning **map-wide range, not line of sight**. So the feature is implemented entirely inside the Police role by consuming traffic already on the channel: zero ambulance-side code, zero configuration change, zero extra bandwidth.
-
-The same probe showed `MessageRoad` running at 48–452 messages per cycle against a single channel, so adding another broadcast type would have pushed at a real limit. We record this as a design decision made on measured evidence rather than assumption.
+24 is the entire ambulance team and the count is flat, meaning **map-wide range**. So the feature is implemented entirely inside the Police role by consuming traffic already on the channel.
 
 #### 5.5.2 The stall signal
 
@@ -354,9 +356,8 @@ The same probe showed `MessageRoad` running at 48–452 messages per cycle again
 
 An ambulance that is resting, rescuing, loading or unloading is stationary *on purpose*; position stagnation alone cannot tell those apart from being blocked. Buried and dead ambulances are excluded — police clearing cannot help either.
 
-The release condition is the elegant part: when the ambulance reports a **new position**, it is travelling again. That is direct observable evidence the escort worked, so `escortFreed / escortStarted` is a causal measure rather than a correlation with final score. `ESCORT_BUDGET = 20` covers only the failure path.
+When the ambulance reports a **new position**, it is travelling again. That is direct observable evidence the escort worked, so `escortFreed / escortStarted` is a causal measure rather than a correlation with final score. `ESCORT_BUDGET = 20` covers only the failure path.
 
-As with the door sweep, the candidate test deliberately does **not** require the ambulance's road to carry a known blockade — that would be the same fog-of-war trap, rejecting exactly the cases worth investigating.
 
 ### 5.6 Observation layer
 
@@ -369,13 +370,13 @@ As with the door sweep, the candidate test deliberately does **not** require the
 | `URFPoliceStuckDetector` | displacement-based stuck status and confirmed stuck events |
 | `URFPoliceCsvExporter` | one CSV row per agent per timestep |
 
-Each observed class adds only what its parent cannot see about itself; none re-records or re-exports, because a duplicate export would double every row *and* evaluate the stuck detector twice per cycle, corrupting its displacement history. `URFObservedRoadDetector` is the single owner of position recording.
+Each observed class adds only what its parent cannot see about itself.
 
-The exporter writes to `logs/urf/police/police-observation-v2-<runId>-agent-<id>.csv` with schema version `URF_POLICE_OBS_V2` and 44 columns, guarded against duplicate export of the same agent-timestep.
+The exporter writes to `logs/urf/police/police-observation-v2-<runId>-agent-<id>.csv` with schema version `URF_POLICE_OBS_V2` and 44 columns.
 
 ---
 
-## 6. Testing, Experiments and Results
+## 6. Testing, Experiments and Results {#6-testing-experiments-and-results}
 
 ### 6.1 Protocol
 
@@ -417,7 +418,7 @@ Improved URF develop by us :
 ./launch.sh -mc config/module_improved_urf.cfg -all
 ```
 
-### 6.2 Baseline: `URFPoliceExtActionClear` vs `DefaultExtActionClear`
+### 6.2 Comparing 2 Baseline with Our work
 
 Comparing the lecturer-supplied clearing logic against the ADF default, all else equal.
 
@@ -433,18 +434,19 @@ Comparing the lecturer-supplied clearing logic against the ADF default, all else
 
 | | Montreal | Paris | Berlin |
 | -- | -- | -- | -- |
-| Run 1 | 16.234 | 11.299 |  |
-| Run 2 | 16.234 | 11.299 | [score] |
-| Run 3 | 16.234 | 11.299 | [score] |
+| Run 1 | 16.234 | 11.299 | 9.568 |
+| Run 2 | 16.234 | 11.299 | 9.568 |
+| Run 3 | 16.234 | 11.299 | 9.568 |
 
-### 6.3 Full URF vs Default Baseline
+**Full URF (Our) :**
 
-| Configuration | Montreal | Paris | Berlin |
-| -- | -- | -- | -- | -- |
-| Official baseline | 16.234 | 11.299 | [score] |
-| Improved URF | 17.425 | 13.541  | 10.098 |
+| | Montreal | Paris | Berlin |
+| -- | -- | -- | -- |
+| Run 1 | 17.425 | 13.541 | 10.098 |
+| Run 2 | 17.425 | 13.541 | 10.098 |
+| Run 3 | 16.556 | 13.541 | 10.098 |
 
-### 6.4 Evidence figures
+### 6.3 Evidence figures
 
 | Figure | Content |
 | -- | -- |
@@ -453,36 +455,102 @@ Comparing the lecturer-supplied clearing logic against the ADF default, all else
 | ![](img/police-ignore-ambulance-causing-victim-dead.png) | Issue 3 — police passing a blocked ambulance causing refugee dead |
 | ![](img/door-open-and-police-help-ambulance.png) | After fixes — refuge door open, police dispersed |
 
+### 6.4 URF Police Observation CSV — Column Reference
+
+Schema `URF_POLICE_OBS_V2`. One row per police agent per simulation timestep, written by
+`URFPoliceCsvExporter.export(...)` at the end of the decision cycle.
+
+File path: `{user.dir}/logs/urf/police/police-observation-v2-{runId}-agent-{agentId}.csv`
+
+"Source file" below means the file that *decides* the value. Almost everything is stored in
+`URFPoliceMetrics` and read back out by the exporter, so that staging step is not repeated in every row.
+
+| # | Column | Possible values | Source file | Explanation |
+|---|--------|-----------|----------|-----------------|
+| 1 | `schemaVersion` | `"URF_POLICE_OBS_V2"` | `URFPoliceCsvExporter` | Constant. Bump it whenever you add or reorder columns, so old and new CSVs are never silently mixed. |
+| 2 | `runId` | `"yyyyMMdd-HHmmss"` | `URFPoliceCsvExporter` | Timestamp captured once when the class loads. Every agent in the same JVM run shares it, so it groups a run. It does **not** record which map was used. |
+| 3 | `time` | integer ≥ 1 | `URFObservedRoadDetector` (`agentInfo.getTime()`) | Simulation timestep. One row per step; the exporter refuses a duplicate write for the same agent and time. |
+| 4 | `agent` | `EntityID` int | `URFPoliceMetrics` (`agentInfo.getID()`) | The police agent's entity id. Also in the filename, so all rows in one file share it. |
+| 5 | `position` | `EntityID` int | `URFObservedRoadDetector` | Area (Road or Building) the agent occupies this step. |
+| 6 | `x` | double, world units (mm) | `URFObservedRoadDetector` | Physical X. Needed because an agent can move *within* one Area, which `position` alone cannot show. |
+| 7 | `y` | double, world units (mm) | `URFObservedRoadDetector` | Physical Y. |
+| 8 | `target` | `EntityID` int, or blank | `URFRoadDetector` | Road chosen by the scoring logic (or by the refuge-door sweep / stuck-agent escort override). Blank when no target exists. |
+| 9 | `action` | `MOVE` / `CLEAR` / `REST` / `NONE` / an Action class name | `URFPoliceExtActionClear` or `URFPoliceExtActionMove` | The final autonomous action for the step. Values come from `URFActionType`; an unmodelled `Action` subclass prints its class simple name instead of `OTHER`. |
+| 10 | `actionSource` | `CLEAR_MODULE` / `MOVE_MODULE` / `TACTICS_FALLBACK_REST` / `UNSPECIFIED` / `UNKNOWN` / `NONE` | same as above | Which decision stage produced the action. Values come from `URFActionSource`. `TACTICS_FALLBACK_REST` means the MOVE module returned null and tactics fell through to rest — a bug signal. |
+| 11 | `pathLength` | integer ≥ 0 | `URFPoliceMetrics` (`ActionMove.getPath()`) | Number of areas in the move path. `0` on non-MOVE rows. A MOVE with length ≤ 0 is `MOVE_WITHOUT_PATH`. |
+| 12 | `stepDistance` | double ≥ 0 | `URFPoliceMetrics.recordPosition` | Euclidean distance travelled since the previous step, `hypot(dx, dy)`. The stuck detector calls anything below 500.0 "no progress". |
+| 13 | `totalDisplacement` | double ≥ 0, monotonic | `URFPoliceMetrics.recordPosition` | Running sum of `stepDistance`. Path length walked, not distance from start. |
+| 14 | `moveUsePosition` | `true` / `false` | `URFPoliceMetrics` (`ActionMove.getUsePosition()`) | Whether the move targets a coordinate inside an area rather than just an area sequence. |
+| 15 | `moveX` | integer | `URFPoliceMetrics` (`ActionMove.getPosX()`) | Target X of a positional move. `0` when `moveUsePosition` is false. |
+| 16 | `moveY` | integer | `URFPoliceMetrics` (`ActionMove.getPosY()`) | Target Y of a positional move. |
+| 17 | `clearTarget` | `EntityID` int, or blank | `URFPoliceMetrics` (`ActionClear.getTarget()`) | The **blockade** being cut (not a road), so ids are far higher than area ids. Blank on every non-CLEAR row. |
+| 18 | `clearUseTarget` | `true` / `false` | `URFPoliceMetrics` (`ActionClear.getUseOldFunction()`) | `true` = blockade-targeted clear. `false` = directional clear, or no clear this step. |
+| 19 | `clearX` | integer | `URFPoliceMetrics` (`ActionClear.getPosX()`) | Aim X. Non-zero only for the 3-argument directional clear used by the recovery path. |
+| 20 | `clearY` | integer | `URFPoliceMetrics` (`ActionClear.getPosY()`) | Aim Y, same condition. |
+| 21 | `clearRequestTarget` | `EntityID` int, or blank | `URFPoliceExtActionClear` | Road the tactics class handed the CLEAR module this step. **Sticky**: only rewritten when the CLEAR module runs. |
+| 22 | `moveRequestTarget` | `EntityID` int, or blank | `URFPoliceExtActionMove` | Target actually handed to the path follower after the road/search/push-through ladder. **Sticky**, and blank when the agent stands on its target and pushes through instead. |
+| 23 | `moveCount` | integer ≥ 0, monotonic | `URFPoliceMetrics` | Cumulative MOVE actions. |
+| 24 | `clearCount` | integer ≥ 0, monotonic | `URFPoliceMetrics` | Cumulative CLEAR actions. |
+| 25 | `restCount` | integer ≥ 0, monotonic | `URFPoliceMetrics` | Cumulative REST actions. Should stay low; a rising value means the agent is idle. |
+| 26 | `otherActionCount` | integer ≥ 0, monotonic | `URFPoliceMetrics` | Cumulative actions that are none of the three above. |
+| 27 | `targetChangeCount` | integer ≥ 0, monotonic | `URFPoliceMetrics.recordTarget` | How often the road target changed. Rising fast relative to `time` means target thrashing — the agent keeps re-picking before arriving. |
+| 28 | `samePositionStreak` | integer ≥ 0 | `URFPoliceMetrics.recordPosition` | Consecutive steps in the same Area. Resets on any area change. Note it counts *area*, so it stays high while the agent shuffles inside one long road. |
+| 29 | `maxSamePositionStreak` | integer ≥ 0, monotonic | `URFPoliceMetrics.recordPosition` | High-water mark of the above for the whole run. |
+| 30 | `possibleStuck` | `true` / `false` | `URFPoliceStuckDetector` | Detector's coarse flag, written back into metrics. True from 2 consecutive failed moves. |
+| 31 | `stuckStatus` | `INITIALIZING` / `POSSIBLE_STUCK` / `CONFIRMED_STUCK` / `CLEARING` / `RESTING` / `NO_MOVE_RESULT` / `MOVE_PENDING` / `MOVE_WITHOUT_PATH` / `NO_ACTION` / `OTHER_ACTION` | `URFPoliceStuckDetector` | Full detector state, from `URFStuckStatus`. The non-stuck values classify normal behaviour rather than signalling a problem. |
+| 32 | `failedMoveStreak` | integer ≥ 0 | `URFPoliceStuckDetector` | Consecutive MOVEs that had a path but produced under 500.0 units of travel. Resets on any progress, CLEAR or REST. |
+| 33 | `confirmedStuckEvents` | integer ≥ 0, monotonic | `URFPoliceStuckDetector` | Count of *transitions into* confirmed-stuck (4 failed moves **and** 3 against the same target), not steps spent stuck. |
+| 34 | `clearModuleCalls` | integer ≥ 0, monotonic | `URFPoliceExtActionClear` | Times the CLEAR module ran. Increments every step, so it tracks `time`. |
+| 35 | `clearNullResults` | integer ≥ 0, monotonic | `URFPoliceExtActionClear` | Times CLEAR returned null and handed control to the MOVE module. |
+| 36 | `clearActionResults` | integer ≥ 0, monotonic | `URFPoliceExtActionClear` | Times CLEAR produced an `ActionClear`. |
+| 37 | `clearMoveResults` | integer ≥ 0, monotonic | `URFPoliceExtActionClear` | Times CLEAR produced an `ActionMove`. Expected to stay 0 — the module is not meant to move. |
+| 38 | `clearRestResults` | integer ≥ 0, monotonic | `URFPoliceExtActionClear` | Times CLEAR produced an `ActionRest`. Expected 0. |
+| 39 | `moveModuleCalls` | integer ≥ 0, monotonic | `URFPoliceExtActionMove` | Times the MOVE module ran. Equals `clearNullResults`, since MOVE only runs when CLEAR declines. |
+| 40 | `moveNullResults` | integer ≥ 0, monotonic | `URFPoliceExtActionMove` | **Must stay 0.** The MOVE module is contractually never-null; a null lets tactics fall through to rest. |
+| 41 | `moveActionResults` | integer ≥ 0, monotonic | `URFPoliceExtActionMove` | Times MOVE produced an `ActionMove`. |
+| 42 | `moveRestResults` | integer ≥ 0, monotonic | `URFPoliceExtActionMove` | Times MOVE produced an `ActionRest`. |
+| 43 | `fallbackRestCount` | integer ≥ 0, monotonic | `URFPoliceExtActionMove` | Increments alongside `moveNullResults`. Counts the observed substitute rest; it does not change the real action. |
+| 44 | `clearCalcUs` | double ≥ 0, microseconds | `URFPoliceExtActionClear` | Wall time inside the CLEAR module this step. |
+| 45 | `moveCalcUs` | double ≥ 0, microseconds | `URFPoliceExtActionMove` | Wall time inside the MOVE module this step. `0` on steps where MOVE did not run is not emitted — the value is sticky from the last call. |
+
 ---
 
-## 7. Discussion
+#### Accounting identities
 
-### 7.1 Fog of war is a different problem from prioritisation
+Useful as sanity checks.
 
-The most transferable lesson from this project is that **a scoring function cannot prioritise what has never been perceived**. Both Issue 1 and Issue 3 look like prioritisation failures and are not. In each case the correct fix was to send an agent to look, then let the existing scoring take over. We initially tried to solve Issue 1 by raising the refuge weight, which had no effect whatsoever, because the road was never in the candidate set to be weighted.
+```
+clearNullResults + clearActionResults          == clearModuleCalls
+moveModuleCalls                                == clearNullResults
+moveCount + clearCount + restCount + otherActionCount == number of rows
+```
 
-### 7.2 Silent failure modes dominated our debugging time
+#### Data for Most of the Police 
 
-Three separate defects produced identical visible behaviour — police ignoring their targets — with no exception, no log line and no compilation error:
+1. Averagely 20% of time spent on clear and 80% spent on move.
+2. `moveNullResults`, `restCount`, `otherActionCount` and `fallbackRestCount`and all **0**, they never rest. 
+3. `possibleStuck` false throughout, `confirmedStuckEvents` 0, `failedMoveStreak` peaked at 1
+4. No positional moves were issued, `moveUsePosition` false and `moveX`/`moveY` 0 everywhere
+5. `clearX`/`clearY` 0 everywhere while `clearUseTarget` is true on all clears, means every clear was blockade-targeted and the directional recovery clear never fired.
 
-1. The static target bridge had readers but no writer.
-2. `Edge.isPassable()` reports wall geometry, not blockade state, so MOVE kept choosing a blocked exit.
-3. A module-key mismatch would silently construct a second detector whose `calc()` never runs.
+---
 
-Each was found by instrumentation, not by reading code. This is the strongest argument for the observation layer: `obsMoveRoadTarget=null` on every line identified defect 1 in seconds after days of speculation.
+## 7. Discussion {#7-discussion}
 
-### 7.3 What measurement changed about our design
+**A scoring function cannot prioritise what has never been perceived**, issue 1 and issue 3 can't solve by raising the weight of refuge and the weight of ambulance team. So the easiest method is add an if-else block to manually let police to check both. This should be optimize by communiacation module which will be discuss in sections later.
 
-Two design decisions were reversed by data rather than argument:
+Bug solving is pain such that we can't identify it immediately and it just failed silently.
 
-- We planned a custom ambulance→police message. A probe showed the needed data was already arriving at 24 messages per cycle, and that the channel was carrying up to 452 `MessageRoad` messages per cycle. The custom message was dropped.
-- We assumed perception-range escort would be adequate. The same probe showed message range is map-wide, which made the feature far more useful than the perception-only version we had designed.
+Two design decisions :
+
+- We planned a custom ambulance→police message. The needed data was already arriving at 24 messages per cycle, and that the channel was carrying up to 452 `MessageRoad` messages per cycle. We no need custom message.
+- Message range is map-wide, which made the feature far more useful than the perception-only version we had designed.
 
 §6 numbers actually show that our improvement work with 17.425 scores in montreal map, slightly higher than default baseline 16.234. However in larger map like paris and berlin, we earn lower score than smaller map like montreal.
 
 ---
 
-## 8. Limitations and Future Work
+## 8. Limitations and Future Work {#8-limitations-and-future-work}
 
 ### 8.1 Scope
 
@@ -495,28 +563,19 @@ Two design decisions were reversed by data rather than argument:
 | **Police clump** | All agents run identical logic and often select the same target, so they converge and duplicate work. A distributed assignment — sort police IDs, take `myIndex % doors.size()` — would disperse them with no communication, since every agent knows the full police roster from `worldInfo` at startup. |
 | **Oscillating agents are not detected** | The escort detects *frozen* ambulances. An ambulance ping-ponging between two roads resets its stall clock every cycle and is never treated as stuck, despite being equally blocked. Tracking the last 3–4 reported positions would close this. |
 | **No inter-police coordination** | Two police agents on the same road both clear the nearest blockade. No target reservation exists. |
-| **Corridor value is a degree proxy** | `min(1, deg/4)` approximates centrality. True betweenness centrality would need a precomputed pass. |
 | **Blocked-agent term is inferred** | A teammate standing on a blocked road is *assumed* stuck; the agent cannot observe another agent's failed MOVE commands. |
 | **Fire brigades not escorted** | `MessageFireBrigade` arrives at 36 per cycle with the same data shape; extending the escort is largely a copy of the observe loop. |
 | **Constants are untuned** | `STALL_LIMIT`, `STAGNANT_CLEAR_LIMIT`, `RECOVERY_EXTENSION`, `SWEEP_DEADLINE` were chosen by reasoning, not measurement. |
 
 ### 8.3 Future work
 
-1. **Distributed door and target assignment** — the single highest-value next change, addressing the clumping that currently wastes most of the police fleet.
+1. **Distributed door and target assignment** — to avoid all police having the same target
 2. **Target reservation via `MessagePoliceForce`** — the messages already arrive at 22 per cycle and are currently unused.
-3. **Bottleneck and centrality analysis** — precompute true corridor importance instead of the degree proxy.
-4. **Learning-based ranking** — the CSV schema was designed with this in mind. Forty-four columns per agent per timestep across multiple maps is a usable dataset for learning the scoring weights rather than hand-setting them. This is the long-term motivation for the observation layer, and any such model must be compared fairly against the hand-tuned baseline reported here.
+3. **Machine Learning Algorithm** — the CSV schema was ready to be the dataset in order to train a usable machine learning algorithm that improve the performance for agents.
 
 ---
 
-## 9. Conclusion
-
-**Issue 1 — Refuge entrances never cleared.** We define a *door* as a road sharing an edge with a refuge. When a door carried a blockade, ambulances could not deliver patients and civilians accumulated outside the refuge and died. No police agent ever cleared a door.
-
-**Issue 2 — Police agents freeze.** Police stopped making progress. The count of frozen agents grew monotonically with timestep.
-
-**Issue 3 — Blocked ambulances ignored.** An ambulance stuck behind a blockade was passed by police agents that continued clearing low-value blockades elsewhere.
-
+## 9. Conclusion {#9-conclusion}
 
 In conclude, we built modules that make police can do basic clearing and moving without stuck with the codes provided by Dr. Mohammad Babrdel Bonab as the base. 
 
@@ -530,46 +589,18 @@ The result shows our improvement slightly beat the baseline model in 3 different
 
 ---
 
-## 10. Individual Contributions
+## 10. Individual Contributions {#10-individual-contributions}
 
 | Student Name | Student ID | Contribution |
-| -- | -- | -- |
-| Chong Zi Yang | 2401892 | [contribution] |
-| Carlos Wong | 2303326 | [contribution] |
+| -- | -- | ------------------ |
+| Carlos Wong | 2303326 | Observation module, presentation slide, tester |
+| Chong Zi Yang | 2401892 | Improvement module, report, tester |
 
 ---
 
-## 11. References
+## 11. References {#11-references}
 
 1. RoboCup Rescue Simulation. `rcrs-server`. https://github.com/roborescue/rcrs-server
 2. RoboCup Rescue Simulation. `adf-core-java`. https://github.com/roborescue/adf-core-java
 3. RoboCup Rescue Simulation. `adf-sample-agent-java`. https://github.com/roborescue/adf-sample-agent-java
 4. Bonab, M. B. (2026). *UECS1044/UECS1144 Group Assignment: RCRS Agent Simulation*. Universiti Tunku Abdul Rahman.
-
----
-
-## Appendix A — Submission Checklist
-
-### Rubric gaps to close (ordered by risk)
-
-| # | Gap | Section | Cost |
-| -- | -- | -- | -- |
-| 1 | No target-selection strategy for Fire Brigade or Ambulance Team | §9.1 | ~2 × 100 lines, or an honest statement |
-| 2 | No separate configuration files | §7.1 | ~15 min |
-| 3 | Path planner not evaluated | §9.1 | one ablation row |
-| 4 | No enums for states/reasons | §4.2 | ~30 min refactor |
-| 5 | Interfaces not declared | §4.2 | argue it, or extract one |
-
-### Deliverables
-
-| Item | Status |
-| -- | -- |
-| A. Complete Java source, config, Gradle, no build artifacts | ▢ |
-| B. Final report PDF | ▢ |
-| C. UML class diagram | ▢ |
-| C. Workflow diagram | ▢ |
-| README with exact build/run instructions | ▢ |
-| E. Individual contributions | ▢ |
-| F. Demonstration video, 15–30 min | ▢ |
-| ZIP named `G3_CS_UECS1044_GA.zip` | ▢ |
-| SHA/checksum or timestamp submitted before deadline | ▢ |
