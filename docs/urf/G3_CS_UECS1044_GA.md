@@ -95,7 +95,7 @@ cd ..
 cd rcrs-server/scripts && ./start.sh
 
 # One Tab Run Our Repo, Depends the name, we have 2
-cd RoboCupRAS && ./launch -all
+cd RoboCupRAS && ./gradlew clean && ./gradlew build && ./launch.sh -all
 
 # Optional : Run Specific Map on Server
 cd rcrs-server/scripts && ./start.sh -m ../maps/montreal/map -c ../maps/montreal/config
